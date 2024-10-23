@@ -1,14 +1,12 @@
 from fastapi import FastAPI
 
-#from . import engine, views
-#from .database import create_db_and_tables
+from . import engine, routes
+from .database import create_db_and_tables
 
 
 app = FastAPI()
 
-#app.include_router(views.log_router)
-#app.include_router(views.user_router)
-
+app.include_router(routes.status_router)
 
 @app.on_event("startup")
 def on_startup() -> None:
@@ -16,7 +14,7 @@ def on_startup() -> None:
     Create the database and tables on startup
     :return: None
     """
-    ... #create_db_and_tables(engine)
+    create_db_and_tables(engine)
 
 
 @app.get("/")
