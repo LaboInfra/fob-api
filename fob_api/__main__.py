@@ -9,7 +9,8 @@ from sqlmodel import Session, select
 
 from . import engine
 from .database import create_db_and_tables
-from .models import User, get_hashed_password
+from .models import User
+from .auth import hash_password
 
 
 def main() -> None:
@@ -42,7 +43,7 @@ def main() -> None:
             user = User(username=username)
 
         # set password and admin rights
-        user.password = get_hashed_password(password)
+        user.password = hash_password(password)
         user.email = email
         user.is_admin = True
         session.add(user)
