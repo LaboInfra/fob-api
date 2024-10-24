@@ -24,3 +24,8 @@ def get_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> str
 @router.get("/token/me")
 def get_me(user: Annotated[User, Depends(auth.get_current_user)]) -> str:
     return user.username
+
+@router.get("/token/refreshtoken")
+def refresh_token(user: Annotated[User, Depends(auth.get_current_user)]) -> str:
+    token = auth.encode_token(user.username)
+    return Token(access_token=token, token_type="bearer")
