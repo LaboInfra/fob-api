@@ -6,8 +6,7 @@ services:
     command: sleep infinity
     volumes:
       - ..:/workspace
-    links:
-      - redis
+
   redis:
     image: redis:alpine
     ports:

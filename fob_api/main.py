@@ -25,4 +25,6 @@ async def root() -> dict[str, str]:
     This route is useless, I just leave it here because I don't care about it :)
     :return: dict[str, str] Hello World
     """
+    from fob_api.worker import create_test_task
+    create_test_task.delay()
     return {"message": "Hello World"}
