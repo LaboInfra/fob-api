@@ -1,6 +1,7 @@
+from os import environ
+
 from sqlalchemy import Engine
 from sqlmodel import create_engine, SQLModel
-from os import environ
 
 
 def init_engine() -> Engine:
@@ -9,7 +10,7 @@ def init_engine() -> Engine:
     :return: Engine object
     """
     print("Initializing database engine")
-    return create_engine(environ.get("DB_URI", "sqlite:///db.sqlite3"), echo=True)
+    return create_engine(environ.get("DATABASE_URL", "sqlite:///db.sqlite3"), echo=True)
 
 
 def create_db_and_tables(engine: Engine) -> None:
