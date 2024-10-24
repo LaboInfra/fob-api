@@ -1,0 +1,14 @@
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sleep infinity
+    volumes:
+      - ..:/workspace
+    links:
+      - redis
+  redis:
+    image: redis:alpine
+    ports:
+      - "127.0.0.1:6379:6379"

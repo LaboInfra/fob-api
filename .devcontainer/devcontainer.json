@@ -1,8 +1,13 @@
 {
 	"name": "Python 3.12 with poetry",
-	"build": {
-		"dockerfile": "Dockerfile"
-	},
+	//"build": {
+	//	"dockerfile": "Dockerfile"
+	//},
+
+	"dockerComposeFile": ["compose.yml"],
+	"service": "devcontainer",
+	"workspaceFolder": "/workspace",
+
 
 	// 👇 Features to add to the Dev Container. More info: https://containers.dev/implementors/features.
 	// "features": {},
