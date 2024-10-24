@@ -2,7 +2,6 @@
 This script create or update user password and give admin right
 this is not a part of the app, this is a helper script to initialize the app
 """
-
 from sys import argv
 
 from sqlmodel import Session, select

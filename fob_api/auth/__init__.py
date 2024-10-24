@@ -1,15 +1,16 @@
 from datetime import datetime
 from datetime import timedelta
 from typing import Annotated
-from fastapi import Depends, Security, HTTPException
-from fastapi.security import HTTPBasic, HTTPBasicCredentials, HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
+from uuid import uuid4
+from os import environ
+
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBasic, OAuth2PasswordBearer
 from passlib.context import CryptContext
 from jose import jwt
 from jose.jwt import JWTError, ExpiredSignatureError, JWTClaimsError
-from uuid import uuid4
-
-
 from sqlmodel import Session, select
+
 from fob_api.models import User
 from fob_api import engine
 
@@ -17,10 +18,12 @@ password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 http_basic_security = HTTPBasic()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-jwt_secret = "CHANGE_ME_TOTO"
-jwt_issuer = "FastOnBoard-API"
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+jwt_secret = environ.get("SECRET_KEY")
 jwt_expire_days = 1
+
+if not jwt_secret:
+    raise ValueError("JWT secret not set")
 
 def hash_password(password: str) -> str:
     """
@@ -31,39 +34,33 @@ def hash_password(password: str) -> str:
     return password_context.hash(password)
 
 
-def encode_token(self, user_id) -> str:
+def encode_token(username) -> str:
     return jwt.encode({
-        "exp": datetime.now() + timedelta(days=self.token_days_expiry),
+        "exp": datetime.now() + timedelta(days=jwt_expire_days),
         "iat": datetime.now(),
         "jti": str(uuid4()),
-        "iis": self.issuer,
         "nbf": datetime.now(),
-        "sub": str(user_id)
-    }, self.secret, algorithm="HS256")
+        "sub": str(username)
+    }, jwt_secret, algorithm="HS256")
 
 
-def decode_token(self, token: str) -> dict:
+def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> User:
     try:
-        return jwt.decode(token, self.secret, issuer=self.issuer, algorithms=["HS256"])
+        payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
+        with Session(engine) as session:
+            return session.exec(select(User).where(User.username == payload["sub"])).first()
+        raise HTTPException(status_code=401, detail="No user matching the token")
     except JWTClaimsError as e:
-        raise HTTPException(status_code=400, detail=f"JWTClaimsError: {e}")
+        raise HTTPException(status_code=401, detail=f"JWTClaimsError: {e}")
     except ExpiredSignatureError as e:
-        raise HTTPException(status_code=400, detail=f"ExpiredSignatureError: {e}")
+        raise HTTPException(status_code=401, detail=f"ExpiredSignatureError: {e}")
     except JWTError as e:
-        raise HTTPException(status_code=400, detail=f"JWTError: {e}")
+        raise HTTPException(status_code=401, detail=f"JWTError: {e}")
 
-## Validators
 
-### Basic Auth Validator
-def basic_auth_validator(credentials: Annotated[HTTPBasicCredentials, Depends(http_basic_security)]) -> bool:
+def basic_auth_validator(username: str, password: str) -> User:
     with Session(engine) as session:
-        user = session.exec(select(User).where(User.username == credentials.username)).first()
-        if not user:
-            raise HTTPException(status_code=401, detail="Unauthorized bad username")
-        if password_context.verify(credentials.password, user.password):
-            raise HTTPException(status_code=401, detail="Unauthorized bad password")
-        return credentials.username
-
-### JWT Auth Validator
-def jwt_auth_validator(token: Annotated[str, Depends(oauth2_scheme)]) -> bool:
-    ...
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user or not password_context.verify(password, user.password):
+            return False
+        return user

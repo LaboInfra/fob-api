@@ -1,26 +1,26 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends
-from fastapi.security import HTTPBasicCredentials
+
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
+
 from fob_api import auth
 from fob_api.models.user import User
 
 router = APIRouter()
 
-@router.get("/token")
-def get_token(username: Annotated[HTTPBasicCredentials, Depends(auth.basic_auth_validator)]) -> str:
-    """
-    Get a JWT token
-    :param credentials: HTTPBasicCredentials object
-    :return: JWT token
-    """
-    return auth.JWTAuthHandler().encode_token(username)
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
-@router.get("/token/decode")
-def decode_token(token: Annotated[str, Depends(auth.jwt_auth_validator)]) -> dict:
-    """
-    Decode a JWT token
-    :param token: JWT token
-    :return: decoded token
-    """
-    return auth.JWTAuthHandler().decode_token(token)
+@router.post("/token", response_model=Token)
+def get_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> str:
+    user = auth.basic_auth_validator(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = auth.encode_token(user.username)
+    return Token(access_token=token, token_type="bearer")
+
+@router.get("/token/me")
+def get_me(user: Annotated[User, Depends(auth.get_current_user)]) -> str:
+    return user.username

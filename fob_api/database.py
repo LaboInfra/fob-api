@@ -1,6 +1,7 @@
+from os import environ
+
 from sqlalchemy import Engine
 from sqlmodel import create_engine, SQLModel
-from os import environ
 
 
 def init_engine() -> Engine:

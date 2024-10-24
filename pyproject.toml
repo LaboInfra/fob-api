@@ -14,7 +14,7 @@ python-dotenv = "^1.0.1"
 pyjwt = "^2.9.0"
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 python-jose = "^3.3.0"
-
+bcrypt = "^3.2.0"
 
 [build-system]
 requires = ["poetry-core"]
