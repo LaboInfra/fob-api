@@ -6,13 +6,11 @@ from fastapi.security import HTTPBasicCredentials
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from fob_api import engine, security
-from fob_api.models.user import is_admin, is_valid_user
 
 router = APIRouter()
 
 @router.get("/status/", tags=["status"])
-def read_logs(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+def read_logs():
     """
     Returns global status information. TODO
     """

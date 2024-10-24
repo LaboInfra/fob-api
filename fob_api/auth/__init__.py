@@ -2,7 +2,7 @@ from datetime import datetime
 from datetime import timedelta
 from typing import Annotated
 from fastapi import Depends, Security, HTTPException
-from fastapi.security import HTTPBasic, HTTPBasicCredentials, HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBasic, HTTPBasicCredentials, HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from passlib.context import CryptContext
 from jose import jwt
 from jose.jwt import JWTError, ExpiredSignatureError, JWTClaimsError
@@ -17,7 +17,7 @@ password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 http_basic_security = HTTPBasic()
 
-jwt_security = HTTPBearer()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 jwt_secret = "CHANGE_ME_TOTO"
 jwt_issuer = "FastOnBoard-API"
 jwt_expire_days = 1
@@ -65,3 +65,5 @@ def basic_auth_validator(credentials: Annotated[HTTPBasicCredentials, Depends(ht
         return credentials.username
 
 ### JWT Auth Validator
+def jwt_auth_validator(token: Annotated[str, Depends(oauth2_scheme)]) -> bool:
+    ...
