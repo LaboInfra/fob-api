@@ -1,0 +1,13 @@
+.git/
+.github/
+.devcontainer/
+.venv/
+__pycache__/
+*.pyc
+db.sqlite3
+.DS_Store
+.env
+compose.yml
+.gitignore
+Makefile
+README.md
