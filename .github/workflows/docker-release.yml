@@ -34,4 +34,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.event.release.tag_name }}
+          tags: ghcr.io/laboinfra/fob-api:${{ github.event.release.tag_name }}

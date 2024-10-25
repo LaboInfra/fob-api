@@ -28,12 +28,12 @@ version-resolver:
       - 'patch'
   default: patch
 autolabeler:
-  - label: 'feature'
+  - label: 'enhancement'
     title:
       - '/feature/i'
       - '/feat/i'
       - '/enhancement/i'
-  - label: 'fix'
+  - label: 'bug'
     title:
       - '/fix/i'
       - '/bugfix/i'
