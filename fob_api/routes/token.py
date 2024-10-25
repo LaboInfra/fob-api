@@ -13,6 +13,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+
 @router.post("/token", response_model=Token, tags=["token"])
 def get_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> str:
     user = auth.basic_auth_validator(form_data.username, form_data.password)
@@ -21,9 +22,6 @@ def get_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> str
     token = auth.encode_token(user.username)
     return Token(access_token=token, token_type="bearer")
 
-@router.get("/token/me", tags=["token"])
-def get_me(user: Annotated[User, Depends(auth.get_current_user)]) -> str:
-    return user.username
 
 @router.get("/token/refreshtoken", response_model=Token, tags=["token"])
 def refresh_token(user: Annotated[User, Depends(auth.get_current_user)]) -> str:
