@@ -25,6 +25,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
         libffi-dev \
         liblzma-dev
 
+RUN curl https://get.docker.com/ | sudo bash -e
+
 # Python and poetry installation
 USER $USER
 ARG HOME="/home/$USER"
