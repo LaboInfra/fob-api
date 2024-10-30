@@ -10,6 +10,8 @@ celery.conf.update(
     broker_connection_retry_on_startup=True
 )
 
+from fob_api.tasks import firezone
+
 @celery.task
 def create_test_task():
     time.sleep(5)
