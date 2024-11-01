@@ -4,10 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlmodel import Session, select
+from celery.result import AsyncResult
 from firezone_client import generate_password
 
-from fob_api import auth, engine
+from fob_api import auth, engine, TaskInfo
 from fob_api.models.user import User
+from fob_api.tasks.core import sync_user as task_sync_user
+from fob_api.auth import hash_password
+from fob_api.worker import celery
 
 router = APIRouter(prefix="/users")
 
@@ -46,7 +50,7 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
         user = User(
             email=user_create.email,
             username=user_create.email.split("@")[0],
-            password=generate_password(),
+            password=hash_password(generate_password()),
             is_admin=False,
             disabled=False
         )
@@ -84,3 +88,27 @@ def delete_user(user: Annotated[User, Depends(auth.get_current_user)], username:
         session.delete(user)
         session.commit()
         return user
+
+@router.get("/{username}/sync", response_model=TaskInfo, tags=["users"])
+def sync_user(user: Annotated[User, Depends(auth.get_current_user)], username: str) -> TaskInfo:
+    """
+    Sync user with Firezone
+    """
+    if not user.is_admin or user.username != username:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    task = task_sync_user.delay(username)
+    return TaskInfo(id=task.id, status=task.status, result=None)
+
+
+@router.get("/{username}/sync/{task_id}", response_model=TaskInfo, tags=["users"])
+def sync_user_status(user: Annotated[User, Depends(auth.get_current_user)], username: str, task_id: str) -> TaskInfo:
+    """
+    Get user sync status
+    """
+    if not user.is_admin or user.username != username:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    result = AsyncResult(task_id, app=celery)
+    data = ""
+    if result.status == "SUCCESS":
+        data = result.get()
+    return TaskInfo(id=task_id, status=result.status, result=data)
