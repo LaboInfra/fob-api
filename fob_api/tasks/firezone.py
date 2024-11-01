@@ -1,33 +1,30 @@
-from os import environ
-from firezone_client import FZClient, generate_password, generate_key_pair
+from firezone_client import generate_password, generate_key_pair
 from firezone_client import User as VpnUser
 from firezone_client import Device as VpnDevice
+from sqlmodel import Session, select
+
 from fob_api.models.user import User
 from fob_api.worker import celery
+from fob_api import engine
+from fob_api.vpn import firezone_driver
 
-
-FIREZONE_ENDPOINT = environ.get('FIREZONE_ENDPOINT')
-FIREZONE_TOKEN = environ.get('FIREZONE_TOKEN')
-
-if not FIREZONE_ENDPOINT or not FIREZONE_TOKEN:
-    raise Exception("Missing FIREZONE_ENDPOINT or FIREZONE_TOKEN in environment variables")
-
-vpn = FZClient(
-    endpoint=environ.get('FIREZONE_ENDPOINT'),
-    token=environ.get('FIREZONE_TOKEN')
-)
 
 @celery.task()
-def create_user(user: User):
-    try:
-        user: VpnUser = vpn.get(VpnUser, id=user.email)
-    except Exception:
-        user = VpnUser(
-            id=user.email,
-            password=generate_password()
-        )
-        vpn.create(user)
-    return user.id
+def create_user(username: str):
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise Exception("User not found")
+        try:
+            vpn_user: VpnUser = firezone_driver.get(VpnUser, id=user.email)
+        except Exception:
+            print(f"User {user.email} not found in Firezone VPN, creating...")
+            firezone_driver.create(VpnUser(
+                email=user.email,
+                password=generate_password(24)
+            ))
+            return create_user(username)
+        return vpn_user.id
 
 @celery.task()
 def get_devices_for_user(user: User):

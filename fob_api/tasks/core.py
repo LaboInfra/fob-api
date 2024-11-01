@@ -1,5 +1,6 @@
 from fob_api.models.user import User
 from fob_api.worker import celery
+from fob_api.tasks import firezone
 
 @celery.task()
 def sync_user(username: str):
@@ -8,4 +9,7 @@ def sync_user(username: str):
       - Config Firezone VPN
       - TODO Config UserInKeyStone
     """
-    return "User synced"
+
+    vpn_user_id = firezone.create_user(username)
+
+    return vpn_user_id
