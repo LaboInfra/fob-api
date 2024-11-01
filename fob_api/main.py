@@ -8,6 +8,8 @@ app = FastAPI()
 
 app.include_router(routes.status_router)
 app.include_router(routes.token_router)
+app.include_router(routes.users_router)
+
 
 @app.on_event("startup")
 def on_startup() -> None:

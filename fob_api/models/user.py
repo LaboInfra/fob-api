@@ -2,6 +2,11 @@ from sqlmodel import Field, SQLModel
 
 
 class User(SQLModel, table=True):
+    """
+    This class represents the User for all the system?
+
+    in this app user cant create account themselves, only admin can create account for them and they need to enable the account by themselves
+    """
     id: int = Field(primary_key=True)
     username: str
     password: str
