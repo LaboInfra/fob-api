@@ -23,7 +23,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
         libxml2-dev \
         libxmlsec1-dev \
         libffi-dev \
-        liblzma-dev
+        liblzma-dev \
+        mariadb-client
 
 RUN curl https://get.docker.com/ | sudo bash -e
 

@@ -1,9 +1,10 @@
 init:
-	@echo "Clean db and .env"
-	@rm -rf db.sqlite3 .env
+	@echo "Remove old .env"
+	rm -rfv .env
 
 	@echo "Create .env"
-	@echo "SECRET_KEY=dev_secret_key" > .env
+	@echo "DATABASE_URL=mysql+pymysql://fastonboard:fastonboard@mariadb:3306/fastonboard" >> .env
+	@echo "SECRET_KEY=dev_secret_key" >> .env
 	@echo "CELERY_BROKER_URL=redis://redis:6379" >> .env
 	@echo "CELERY_RESULT_BACKEND=redis://redis:6379" >> .env
 	@echo "FIREZONE_ENDPOINT=http://firezone:13000/v0" >> .env
