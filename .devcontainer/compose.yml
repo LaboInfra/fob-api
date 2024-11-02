@@ -1,5 +1,6 @@
 volumes:
   postgres_data:
+  mariadb_data:
   firezone_data:
 
 services:
@@ -65,3 +66,16 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  mariadb:
+    image: mariadb:11
+    container_name: mariadb
+    environment:
+      MARIADB_USER: fastonboard
+      MARIADB_PASSWORD: fastonboard
+      MARIADB_DATABASE: fastonboard
+      MARIADB_ROOT_PASSWORD: fastonboard
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"

@@ -1,7 +1,9 @@
 from datetime import datetime
 
-from requests import Session
-from sqlalchemy import select
+from sqlmodel import Session, select
+from fob_api import engine
+from fob_api.models.user import User
+
 from fob_api import engine
 from fob_api.models.user import User
 from fob_api.worker import celery
@@ -15,9 +17,9 @@ def sync_user(username: str):
       - TODO Config UserInKeyStone
     """
     with Session(engine) as session:
-      user: User = session.exec(select(User).filter(User.username == username)).first()
-      if not user:
-         raise ValueError(f"User {username} not found")
+      statement = select(User).where(User.username == username)
+      results = session.exec(statement)
+      user = results.one()
       user.last_synced = datetime.now()
       vpn_user_id = firezone.create_user(username)      
       session.add(user)
