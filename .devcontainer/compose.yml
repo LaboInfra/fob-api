@@ -1,13 +1,67 @@
+volumes:
+  postgres_data:
+  firezone_data:
+
 services:
   devcontainer:
+    container_name: devcontainer
     build:
       context: .
       dockerfile: Dockerfile
     command: sleep infinity
     volumes:
       - ..:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
 
   redis:
     image: redis:alpine
+    container_name: redis
     ports:
       - "127.0.0.1:6379:6379"
+
+  firezone:
+    image: firezone/firezone:0.7.36
+    container_name: firezone
+    ports:
+      - 51820:51820/udp
+      - 13000:13000
+    environment:
+      - VERSION=latest
+      - EXTERNAL_URL=https://localhost
+      - DEFAULT_ADMIN_EMAIL=admin@localhost
+      - DEFAULT_ADMIN_PASSWORD=admin@localhost
+      - GUARDIAN_SECRET_KEY=/wO8IiLcJKK///xbgpO4s6auP3JIyDyTWqBgpeDITypXO+S8XtJKU9wz7Bn/8bZh
+      - SECRET_KEY_BASE=7Ylo/27/HQ1bMcrRypWBaCORzvo+Kxvn+/9xIuMJZ3pwyDdEISp+D1aj2y2yGH2l
+      - LIVE_VIEW_SIGNING_SALT=sVbTZdp6XSJTr5pGayeAeL+OK0z7Oz0k
+      - COOKIE_SIGNING_SALT=X16R1oiS
+      - COOKIE_ENCRYPTION_SALT=HjHI7dxS
+      - WIREGUARD_IPV4_NETWORK=100.64.0.0/10
+      - WIREGUARD_IPV4_ADDRESS=100.64.0.1
+      - WIREGUARD_IPV6_NETWORK=fd00::/106
+      - WIREGUARD_IPV6_ADDRESS=fd00::1
+      - DATABASE_HOST=postgres
+      - DATABASE_NAME=firezone
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_ENCRYPTION_KEY=FYechM1hdkPqemdVMMW9Fc6vEDx1bVfLtZACop8oass=
+    volumes:
+      - firezone_data:/var/firezone
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_DB: firezone
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
