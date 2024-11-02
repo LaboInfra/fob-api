@@ -1,3 +1,4 @@
+from datetime import datetime
 from sqlmodel import Field, SQLModel
 
 
@@ -13,3 +14,4 @@ class User(SQLModel, table=True):
     email: str
     is_admin: bool = False
     disabled: bool = False
+    last_synced: datetime = Field(default=datetime.now())

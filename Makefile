@@ -20,8 +20,7 @@ init:
 
 	@echo "Patch .env by adding FIREZONE TOKEN"
 	@echo "FIREZONE_TOKEN=$$(cat .token)" >> .env
-
-
+	@rm -f .token
 
 serv:
 	poetry run python -m uvicorn fob_api.main:app --reload
