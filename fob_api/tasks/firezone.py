@@ -3,6 +3,7 @@ from firezone_client import User as VpnUser
 from firezone_client import Device as VpnDevice
 from firezone_client import Rule as VpnRule
 from sqlmodel import Session, select
+from uuid import UUID
 
 from fob_api.models.user import User
 from fob_api.worker import celery
@@ -88,20 +89,65 @@ def sync_user_rules(username: str):
 
 
 @celery.task()
-def get_devices_for_user(user: User):
-    user_vpn: VpnUser = vpn.get(VpnUser, id=user.email)
-    all_devices = vpn.list(VpnUser)
-    return [device for device in all_devices if user_vpn.id == device.users]
+def get_devices_for_user(username: str):
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise Exception("User not found")
+
+        user_vpn_id: VpnUser = create_user(username)
+        all_devices: list[VpnDevice] = firezone_driver.list(VpnDevice)
+        return [
+            device
+            for device in all_devices
+            if user_vpn_id == device.user_id
+        ]
 
 @celery.task()
-def create_device(user: User, allowed_ips: list[str]):
-    user_vpn: VpnUser = vpn.get(VpnUser, id=user.email)
-    public_key, private_key = generate_key_pair()
-    device = VpnDevice(
-        id=user_vpn.id,
-        public_key=public_key,
-        allowed_ips=allowed_ips,
-        use_default_allowed_ips=False
-    )
-    vpn.create(device)
-    return device
+def create_device(username, device_name):
+    with Session(engine) as session:
+        user: User = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise Exception("User not found")
+        if len(user.allowed_subnets) == 0:
+            return {
+                "status": "rejected",
+                "message": "User has no allowed subnets"
+            }
+        
+        devices = get_devices_for_user(username)
+        if len(devices) > 5:
+            return {
+                "status": "rejected",
+                "message": "User has too many devices"
+            }
+        for device in devices:
+            if device.name == device_name:
+                return {
+                    "status": "rejected",
+                    "message": "Device with that name already exists"
+                }
+
+        user_vpn_id: VpnUser = create_user(username)
+        public_key, private_key = generate_key_pair()
+        device = VpnDevice(
+            name=device_name,
+            user_id=user_vpn_id,
+            public_key=public_key,
+            allowed_ips=user.allowed_subnets.split(","),
+            use_default_allowed_ips=False
+        )
+        firezone_driver.create(device)
+        
+        for device in get_devices_for_user(username):
+            if device.name == device_name:
+                return {
+                    "status": "success",
+                    "message": "Device created",
+                    "private_key": private_key,
+                    "device": device.__dict__
+                }
+        return {
+            "status": "error",
+            "code_tag": "THIS_SHOULD_NOT_HAPPEN_DEVICE_CREATION"
+        }
