@@ -6,7 +6,7 @@ from .database import init_engine
 class TaskInfo(BaseModel):
     id: str
     status: str
-    result: str | None
+    result: str | dict | None
 
 load_dotenv()
 engine = init_engine()

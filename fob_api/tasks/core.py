@@ -21,9 +21,15 @@ def sync_user(username: str):
       results = session.exec(statement)
       user = results.one()
       user.last_synced = datetime.now()
-      vpn_user_id = firezone.create_user(username)      
+      vpn_user_id = firezone.create_user(username)
+      allowed_subnets = firezone.sync_user_rules(username)      
       session.add(user)
       session.commit()
       session.refresh(user)
 
-    return vpn_user_id
+    return {
+      "username": user.username,
+      "firezone_account_id": vpn_user_id,
+      "allowed_subnets": allowed_subnets,
+      "last_synced": user.last_synced
+    }
