@@ -4,6 +4,7 @@ categories:
   - title: '🚀 Features'
     labels:
       - 'feature'
+      - 'feat'
       - 'enhancement'
   - title: '🐛 Bug Fixes'
     labels:
@@ -22,10 +23,12 @@ version-resolver:
       - 'major'
   minor:
     labels:
+      - 'enhancement'
       - 'feature'
   patch:
     labels:
       - 'patch'
+      - 'bug'
   default: patch
 autolabeler:
   - label: 'enhancement'
@@ -42,7 +45,3 @@ template: |
   ## Changes
 
   $CHANGES
-
-  ## Contributors
-
-  $CONTRIBUTORS
