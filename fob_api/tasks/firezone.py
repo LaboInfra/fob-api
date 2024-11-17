@@ -116,7 +116,7 @@ def create_device(username, device_name):
             }
         
         devices = get_devices_for_user(username)
-        if len(devices) > 5:
+        if len(devices) >= 5:
             return {
                 "status": "rejected",
                 "message": "User has too many devices"
@@ -150,4 +150,21 @@ def create_device(username, device_name):
         return {
             "status": "error",
             "code_tag": "THIS_SHOULD_NOT_HAPPEN_DEVICE_CREATION"
+        }
+
+@celery.task()
+def delete_device(device_id):
+    try:
+        device = firezone_driver.get(VpnDevice, id=device_id)
+        firezone_driver.delete(device)
+        return {
+            "status": "success",
+            "message": "Device deleted"
+        }
+    except Exception as e:
+        # TODO : Need to patch firezone_client to return proper exceptions
+        return {
+            "info": "This error is not handled properly its cant be the divice is not found or other error :/",
+            "status": "error",
+            "message": str(e)
         }
