@@ -17,6 +17,21 @@ init:
 	@echo "Create default superuser"
 	poetry run python -m fob_api admin@laboinfra.net admin admin
 
+	@echo "Start keystone"
+	sudo docker exec -it keystone /var/lib/openstack/bin/keystone-manage db_sync
+	sudo docker exec -it keystone /var/lib/openstack/bin/keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone
+	sudo docker exec -it keystone /var/lib/openstack/bin/keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
+	sudo docker exec -it keystone /var/lib/openstack/bin/keystone-manage bootstrap --bootstrap-password admin --bootstrap-admin-url http://keystone:8000/v3/ --bootstrap-internal-url http://keystone:8000/v3/ --bootstrap-public-url http://keystone:8000/v3/ --bootstrap-region-id LocalDev
+
+	@echo "Create keystone adminrc"
+	@echo "export OS_USERNAME=admin" > adminrc
+	@echo "export OS_PASSWORD=admin" >> adminrc
+	@echo "export OS_PROJECT_NAME=admin" >> adminrc
+	@echo "export OS_USER_DOMAIN_NAME=Default" >> adminrc
+	@echo "export OS_PROJECT_DOMAIN_NAME=Default" >> adminrc
+	@echo "export OS_AUTH_URL=http://keystone:8000/v3/" >> adminrc
+	@echo "export OS_IDENTITY_API_VERSION=3" >> adminrc
+
 	@echo "Config firezone for dev"
 	sudo docker exec -it firezone bin/migrate
 	sudo docker exec -it firezone bin/create-or-reset-admin
@@ -34,6 +49,9 @@ worker:
 
 flower:
 	celery -A fob_api.worker flower
+
+keystone:
+	sudo docker exec -it keystone /var/lib/openstack/bin/keystone-wsgi-public
 
 migrate:
 	poetry run alembic upgrade head

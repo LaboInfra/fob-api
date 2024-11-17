@@ -1,5 +1,4 @@
 FROM mcr.microsoft.com/devcontainers/base:jammy
-# FROM mcr.microsoft.com/devcontainers/base:jammy 
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG USER=vscode
@@ -24,7 +23,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
         libxmlsec1-dev \
         libffi-dev \
         liblzma-dev \
-        mariadb-client
+        mariadb-client \
+        iputils-ping
 
 RUN curl https://get.docker.com/ | sudo bash -e
 
@@ -44,5 +44,7 @@ RUN echo "done 0" \
     && echo "done 2" \
     && pyenv global ${PYTHON_VERSION} \
     && echo "done 3" \
+    &&  pip install python-openstackclient \
+    && echo "done 4" \
     && curl -sSL https://install.python-poetry.org | python3 - \
     && poetry config virtualenvs.in-project true
