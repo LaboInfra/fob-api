@@ -45,4 +45,9 @@ def delete_device(user: Annotated[User, Depends(auth.get_current_user)], usernam
     """
     if not user.is_admin and user.username != username:
         raise HTTPException(status_code=403, detail="You are not an admin")
-    return firezone.delete_device(device_id)
+    devices = firezone.get_devices_for_user(username)
+    for device in devices:
+        if device.id == device_id:
+            return firezone.delete_device(device_id)
+    raise HTTPException(status_code=404, detail="Device not found")
+    
