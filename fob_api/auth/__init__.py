@@ -2,7 +2,6 @@ from datetime import datetime
 from datetime import timedelta
 from typing import Annotated
 from uuid import uuid4
-from os import environ
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBasic, OAuth2PasswordBearer
@@ -11,6 +10,7 @@ from jose import jwt
 from jose.jwt import JWTError, ExpiredSignatureError, JWTClaimsError
 from sqlmodel import Session, select
 
+from fob_api.config import Config
 from fob_api.models import User
 from fob_api import engine
 
@@ -19,7 +19,7 @@ password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 http_basic_security = HTTPBasic()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
-jwt_secret = environ.get("SECRET_KEY")
+jwt_secret = Config().jwt_secret_key
 jwt_expire_days = 1
 
 if not jwt_secret:

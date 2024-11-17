@@ -2,7 +2,7 @@ from os import environ
 
 from sqlalchemy import Engine
 from sqlmodel import create_engine, SQLModel
-
+from fob_api import Config
 
 def init_engine() -> Engine:
     """
@@ -10,10 +10,7 @@ def init_engine() -> Engine:
     :return: Engine object
     """
     print("Initializing database engine")
-    database_url = environ.get("DATABASE_URL")
-    if database_url is None:
-        raise ValueError("DATABASE_URL environment variable is not set")
-    return create_engine(database_url, echo=False)
+    return create_engine(Config().database_url, echo=False)
 
 
 def create_db_and_tables(engine: Engine) -> None:

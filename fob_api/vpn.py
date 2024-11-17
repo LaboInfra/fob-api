@@ -1,15 +1,10 @@
-
-from os import environ
 from firezone_client import FZClient
+from fob_api import Config
 
-FIREZONE_ENDPOINT = environ.get('FIREZONE_ENDPOINT')
-FIREZONE_TOKEN = environ.get('FIREZONE_TOKEN')
-
-if not FIREZONE_ENDPOINT or not FIREZONE_TOKEN:
-    raise Exception("Missing FIREZONE_ENDPOINT or FIREZONE_TOKEN in environment variables")
+config = Config()
 
 firezone_driver = FZClient(
-    endpoint=environ.get('FIREZONE_ENDPOINT'),
-    token=environ.get('FIREZONE_TOKEN'),
+    endpoint=config.firezone_endpoint,
+    token=config.firezone_token,
     ssl_verify=False
 )
