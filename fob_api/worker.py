@@ -1,12 +1,11 @@
-import os
-import time
-
 from celery import Celery
+from fob_api import Config
 
+config = Config()
 celery = Celery(__name__)
 celery.conf.update(
-    broker_url=os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379'),
-    result_backend=os.environ.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379'),
+    broker_url=config.celery_broker_url,
+    result_backend=config.celery_result_backend,
     broker_connection_retry_on_startup=True
 )
 # import need to be after celery is defined to avoid circular import

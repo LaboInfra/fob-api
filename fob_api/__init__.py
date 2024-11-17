@@ -1,6 +1,6 @@
-from dotenv import load_dotenv
 from pydantic import BaseModel
 
+from .config import Config
 from .database import init_engine
 
 class TaskInfo(BaseModel):
@@ -8,5 +8,6 @@ class TaskInfo(BaseModel):
     status: str
     result: str | dict | None
 
-load_dotenv()
+# Initialize configuration and database engine
+Config()
 engine = init_engine()

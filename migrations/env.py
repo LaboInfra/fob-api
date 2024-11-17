@@ -4,11 +4,8 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from sqlmodel import SQLModel
 from alembic import context
-from dotenv import load_dotenv
-from fob_api.models import User
-from os import environ
+from fob_api import Config
 
-load_dotenv()
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -20,7 +17,7 @@ if config.config_file_name is not None:
 
 
 
-config.set_main_option("sqlalchemy.url", environ.get("DATABASE_URL"))
+config.set_main_option("sqlalchemy.url", Config().database_url)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
