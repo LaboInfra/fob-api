@@ -1,5 +1,20 @@
 from os import environ
 
+def parse_bool(value: str) -> bool:
+    """
+    Parse a string to a boolean value
+    :param value: The value to parse
+    :return: The boolean value or None if the value is not recognized
+    """
+    if not value:
+        return None
+    list_of_true = ["true", "yes", "1"]
+    list_of_false = ["false", "no", "0"]
+    if value.lower() in list_of_true:
+        return True
+    if value.lower() in list_of_false:
+        return False
+
 class SingletonMeta(type):
 
     _instances = {}
@@ -23,6 +38,13 @@ class Config(metaclass=SingletonMeta):
 
     jwt_secret_key: str
 
+    mail_server: str
+    mail_port: int
+    mail_username: str
+    mail_password: str
+    mail_starttls: bool
+    mail_sender: str
+
     def __init__(self):
         print("Initializing Config Singleton")
 
@@ -37,13 +59,21 @@ class Config(metaclass=SingletonMeta):
         self.celery_broker_url = environ.get("CELERY_BROKER_URL")
         self.celery_result_backend = environ.get("CELERY_RESULT_BACKEND")
         self.jwt_secret_key = environ.get("SECRET_KEY")
+        self.mail_server = environ.get("MAIL_SERVER")
+        self.mail_port = int(environ.get("MAIL_PORT"))
+        self.mail_username = environ.get("MAIL_USERNAME")
+        self.mail_password = environ.get("MAIL_PASSWORD")
+        self.mail_starttls = parse_bool(environ.get("MAIL_STARTTLS"))
+        self.mail_sender = environ.get("MAIL_SENDER") or self.mail_username
+
+        ignore = ["MAIL_PASSWORD"]
 
         not_set = [
             key.upper()
             for key, value in self.__dict__.items()
-            if not value
+            if value == None and key.upper() not in ignore
         ]
-    
+
         if not_set:
             raise ValueError(f"Environment variables not set: {', '.join(not_set)}")
         print("Config Singleton initialized")
