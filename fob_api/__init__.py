@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 from .config import Config
 from .database import init_engine
+from . import mail
 
 class TaskInfo(BaseModel):
     id: str
@@ -9,5 +10,4 @@ class TaskInfo(BaseModel):
     result: str | dict | None
 
 # Initialize configuration and database engine
-Config()
 engine = init_engine()
