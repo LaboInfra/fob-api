@@ -57,7 +57,6 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
         session.add(user)
         session.commit()
         session.refresh(user)
-        print(f"PASSWORD: {user.password}")
         # TODO: Send email to user with password
         return user
 
