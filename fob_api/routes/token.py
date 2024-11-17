@@ -13,6 +13,8 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+class TokenValidate(BaseModel):
+    valid: bool
 
 @router.post("/token", response_model=Token, tags=["token"])
 def get_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> str:
@@ -27,3 +29,7 @@ def get_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> str
 def refresh_token(user: Annotated[User, Depends(auth.get_current_user)]) -> str:
     token = auth.encode_token(user.username)
     return Token(access_token=token, token_type="bearer")
+
+@router.get("/token/verify", response_model=TokenValidate, tags=["token"])
+def verify_token(user: Annotated[User, Depends(auth.get_current_user)]) -> str:
+    return TokenValidate(valid=True)
