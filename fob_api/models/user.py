@@ -7,9 +7,9 @@ class User(SQLModel, table=True):
     This class represents the User for all the system of laboinfra
     """
     id: int = Field(primary_key=True)
-    username: str
+    username: str = Field(unique=True)
     password: str
-    email: str
+    email: str = Field(unique=True)
     is_admin: bool = False
     disabled: bool = False
     last_synced: datetime = Field(default=datetime.now())
