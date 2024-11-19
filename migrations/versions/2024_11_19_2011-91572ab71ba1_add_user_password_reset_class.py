@@ -24,6 +24,7 @@ def upgrade() -> None:
         sa.Column('id', mysql.INTEGER(display_width=11), autoincrement=True, nullable=False),
         sa.Column('user_id', mysql.INTEGER(display_width=11), autoincrement=False, nullable=False),
         sa.Column('token', mysql.VARCHAR(length=255), nullable=False),
+        sa.Column('source_ip', mysql.VARCHAR(length=255), nullable=False),
         sa.Column('created_at', mysql.DATETIME(), nullable=False),
         sa.Column('expires_at', mysql.DATETIME(), nullable=False),
         sa.PrimaryKeyConstraint('id'),
