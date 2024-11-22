@@ -27,6 +27,12 @@ class UserCreate(BaseModel):
     username: str
     email: str
 
+class UserResetPassword(BaseModel):
+    token: str
+    password: str
+
+class UserResetPasswordResponse(BaseModel):
+    message: str
 
 @router.get("/", response_model=list[UserInfo], tags=["users"])
 def get_users(user: Annotated[User, Depends(auth.get_current_user)]) -> list[UserInfo]:
@@ -70,13 +76,16 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
         session.add(user_reset_password)
         session.commit()
 
-        mail.send_text_mail(user.email, "LaboInfra Account Created",
-            "Your LaboInfra account has been created.\n" +
-            "You can reset your password by running the following command:\n"+
-            f"\t`labctl reset-password --token {user_reset_password.token}`\n" +
-            "This token will expire in 5 days.\n" +
-            "Welcome to LaboInfra Cloud services"
-        )
+        try:
+            mail.send_text_mail(user.email, "LaboInfra Account Created",
+                "Your LaboInfra account has been created.\n" +
+                "You can reset your password by running the following command:\n"+
+                f"\t`labctl reset-password --username {user.username} --token {user_reset_password.token}`\n" +
+                "This token will expire in 5 days.\n" +
+                "Welcome to LaboInfra Cloud services"
+            )
+        except mail.SMTPRecipientsRefused:
+            print("Failed to send email")
 
         return user
 
@@ -131,3 +140,31 @@ def sync_user_status(user: Annotated[User, Depends(auth.get_current_user)], user
     if result.status == "SUCCESS":
         data = result.get()
     return TaskInfo(id=task_id, status=result.status, result=data)
+
+@router.post("/{username}/reset-password", response_model=UserResetPasswordResponse, tags=["users"])
+def reset_password(username: str, user_reset_password: UserResetPassword) -> UserResetPasswordResponse:
+    """
+    Reset user password
+    """
+    # Todo add rate limiting and source_ip validation to prevent abuse
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        password = user_reset_password.password
+        if not user:
+            raise HTTPException(status_code=404, detail="Unable to reset password")
+        user_reset_password = session.exec(
+            select(UserPasswordReset)
+            .where(UserPasswordReset.token == user_reset_password.token)
+            .where(UserPasswordReset.user_id == user.id)
+        ).first()
+        if not user_reset_password:
+            raise HTTPException(status_code=404, detail="Unable to reset password")
+        print(user_reset_password)
+        if user_reset_password.expires_at < datetime.now():
+            session.delete(user_reset_password)
+            session.commit()
+            raise HTTPException(status_code=404, detail="Unable to reset password")
+        user.password = hash_password(password)
+        session.delete(user_reset_password)
+        session.commit()
+        return UserResetPasswordResponse(message="Password reset successfully")
