@@ -3,7 +3,6 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Header
-from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlmodel import Session, select
 from celery.result import AsyncResult
@@ -29,6 +28,9 @@ class UserCreate(BaseModel):
 
 class UserResetPassword(BaseModel):
     token: str
+    password: str
+
+class UserPasswordUpdate(BaseModel):
     password: str
 
 class UserResetPasswordResponse(BaseModel):
@@ -168,3 +170,20 @@ def reset_password(username: str, user_reset_password: UserResetPassword) -> Use
         session.delete(user_reset_password)
         session.commit()
         return UserResetPasswordResponse(message="Password reset successfully")
+
+@router.post("/{username}/change-password", response_model=UserResetPasswordResponse, tags=["users"])
+def change_password(user: Annotated[User, Depends(auth.get_current_user)], username: str, user_password_update: UserPasswordUpdate) -> UserResetPasswordResponse:
+    """
+    Change user password
+    """
+    if user.username != username and not user.is_admin:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Unable to change password")
+        password = user_password_update.password
+        user.password = hash_password(password)
+        session.add(user)
+        session.commit()
+        return UserResetPasswordResponse(message="Password changed successfully")
