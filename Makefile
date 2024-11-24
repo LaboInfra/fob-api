@@ -38,6 +38,10 @@ init:
 	@echo "export OS_AUTH_URL=http://keystone:8000/v3/" >> adminrc
 	@echo "export OS_IDENTITY_API_VERSION=3" >> adminrc
 
+	@echo "Add adminrc in .env"
+	@echo cat adminrc >> .env
+	@sed -i 's/export //g' .env
+
 	@echo "Create Install libs for api"
 	poetry install
 	@echo "Run database migration"

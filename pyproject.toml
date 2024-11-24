@@ -21,6 +21,7 @@ flower = "^2.0.1"
 firezone-client = "^0.1.0"
 alembic = "^1.13.3"
 pymysql = "^1.1.1"
+python-keystoneclient = "^5.5.0"
 
 [build-system]
 requires = ["poetry-core"]
