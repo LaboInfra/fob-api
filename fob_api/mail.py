@@ -1,4 +1,4 @@
-import smtplib
+from smtplib import SMTP, SMTPRecipientsRefused
 from email.mime.text import MIMEText
 
 from fob_api import Config
@@ -6,7 +6,7 @@ from fob_api import Config
 config = Config()
 
 def send_text_mail(receivers: str | list, subject: str, text: str):
-    server = smtplib.SMTP('maildev', 1025)
+    server = SMTP('maildev', 1025)
     message = MIMEText(text, 'plain')
     message['Subject'] = subject
     message['From'] = config.mail_sender
