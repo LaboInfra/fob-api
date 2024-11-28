@@ -13,11 +13,9 @@ init:
 	sudo docker exec -it firezone bin/create-or-reset-admin
 	sudo docker exec -it firezone bin/create-api-token > .token
 
-	@echo "Patch .env by adding FIREZONE TOKEN"
+	@echo "Create .env"
 	@echo "FIREZONE_TOKEN=$$(cat .token)" >> .env
 	rm -fv .token
-
-	@echo "Create .env"
 	@echo "DATABASE_URL=mysql+pymysql://fastonboard:fastonboard@mariadb:3306/fastonboard" >> .env
 	@echo "SECRET_KEY=dev_secret_key" >> .env
 	@echo "CELERY_BROKER_URL=redis://redis:6379" >> .env
@@ -39,7 +37,7 @@ init:
 	@echo "export OS_IDENTITY_API_VERSION=3" >> adminrc
 
 	@echo "Add adminrc in .env"
-	@echo cat adminrc >> .env
+	@cat adminrc >> .env
 	@sed -i 's/export //g' .env
 
 	@echo "Create Install libs for api"

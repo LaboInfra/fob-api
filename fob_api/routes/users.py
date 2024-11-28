@@ -124,7 +124,8 @@ def sync_user(user: Annotated[User, Depends(auth.get_current_user)], username: s
     """
     Sync user with Firezone
     """
-    if not user.is_admin or user.username != username:
+    if user.username != username and not user.is_admin:
+        print(user.username, username, user.is_admin)
         raise HTTPException(status_code=403, detail="You are not an admin")
     task = task_sync_user.delay(username)
     return TaskInfo(id=task.id, status=task.status, result=None)
@@ -135,7 +136,7 @@ def sync_user_status(user: Annotated[User, Depends(auth.get_current_user)], user
     """
     Get user sync status
     """
-    if not user.is_admin or user.username != username:
+    if user.username != username and not user.is_admin:
         raise HTTPException(status_code=403, detail="You are not an admin")
     result = AsyncResult(task_id, app=celery)
     data = ""
@@ -154,14 +155,13 @@ def reset_password(username: str, user_reset_password: UserResetPassword) -> Use
         password = user_reset_password.password
         if not user:
             raise HTTPException(status_code=404, detail="Unable to reset password")
-        user_reset_password = session.exec(
+        user_reset_password: UserPasswordReset = session.exec(
             select(UserPasswordReset)
             .where(UserPasswordReset.token == user_reset_password.token)
             .where(UserPasswordReset.user_id == user.id)
         ).first()
         if not user_reset_password:
             raise HTTPException(status_code=404, detail="Unable to reset password")
-        print(user_reset_password)
         if user_reset_password.expires_at < datetime.now():
             session.delete(user_reset_password)
             session.commit()
