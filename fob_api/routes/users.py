@@ -8,7 +8,7 @@ from celery.result import AsyncResult
 from firezone_client import generate_password
 
 from fob_api import auth, engine, mail
-from fob_api.models.api import TaskInfo
+from fob_api.models.api import TaskInfo, SyncInfo
 from fob_api.models.database import User, UserPasswordReset
 from fob_api.models.api import UserCreate, UserInfo, UserResetPassword, UserPasswordUpdate, UserResetPasswordResponse
 from fob_api.tasks.core import sync_user as task_sync_user
@@ -122,7 +122,7 @@ def sync_user_status(user: Annotated[User, Depends(auth.get_current_user)], user
     result = AsyncResult(task_id, app=celery)
     data = ""
     if result.status == "SUCCESS":
-        data = result.get()
+        data: SyncInfo = result.get().model_dump()
     return TaskInfo(id=task_id, status=result.status, result=data)
 
 @router.post("/{username}/reset-password", response_model=UserResetPasswordResponse, tags=["users"])
