@@ -1,18 +1,14 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 
 from fob_api import auth
-from fob_api.models.user import User
+from fob_api.models.database.user import User
+from fob_api.models.api import Me
 from fob_api.tasks import firezone
 
 router = APIRouter()
 
-class Me(BaseModel):
-    username: str
-    email: str
-    devices_access: list
 
 
 @router.get("/me", tags=["users"], response_model=Me)

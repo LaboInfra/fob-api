@@ -3,9 +3,8 @@ from firezone_client import User as VpnUser
 from firezone_client import Device as VpnDevice
 from firezone_client import Rule as VpnRule
 from sqlmodel import Session, select
-from uuid import UUID
 
-from fob_api.models.user import User
+from fob_api.models.database import User
 from fob_api.worker import celery
 from fob_api import engine
 from fob_api.vpn import firezone_driver

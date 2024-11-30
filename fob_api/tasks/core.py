@@ -2,10 +2,8 @@ from datetime import datetime
 
 from sqlmodel import Session, select
 from fob_api import engine
-from fob_api.models.user import User
 
-from fob_api import engine
-from fob_api.models.user import User
+from fob_api.models.database import User
 from fob_api.worker import celery
 from fob_api.tasks import firezone
 

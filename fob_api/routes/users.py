@@ -2,39 +2,20 @@ from datetime import datetime, timedelta
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Header
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from celery.result import AsyncResult
 from firezone_client import generate_password
 
-from fob_api import auth, engine, TaskInfo, mail
-from fob_api.models.user import User, UserPasswordReset
+from fob_api import auth, engine, mail
+from fob_api.models.api import TaskInfo
+from fob_api.models.database import User, UserPasswordReset
+from fob_api.models.api import UserCreate, UserInfo, UserResetPassword, UserPasswordUpdate, UserResetPasswordResponse
 from fob_api.tasks.core import sync_user as task_sync_user
 from fob_api.auth import hash_password
 from fob_api.worker import celery
 
 router = APIRouter(prefix="/users")
-
-class UserInfo(BaseModel):
-    username: str
-    email: str
-    is_admin: bool
-    disabled: bool
-
-class UserCreate(BaseModel):
-    username: str
-    email: str
-
-class UserResetPassword(BaseModel):
-    token: str
-    password: str
-
-class UserPasswordUpdate(BaseModel):
-    password: str
-
-class UserResetPasswordResponse(BaseModel):
-    message: str
 
 @router.get("/", response_model=list[UserInfo], tags=["users"])
 def get_users(user: Annotated[User, Depends(auth.get_current_user)]) -> list[UserInfo]:

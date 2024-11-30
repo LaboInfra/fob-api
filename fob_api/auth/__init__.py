@@ -11,7 +11,7 @@ from jose.jwt import JWTError, ExpiredSignatureError, JWTClaimsError
 from sqlmodel import Session, select
 
 from fob_api.config import Config
-from fob_api.models import User
+from fob_api.models.database import User
 from fob_api import engine
 
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

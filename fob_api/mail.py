@@ -1,4 +1,4 @@
-from smtplib import SMTP, SMTPRecipientsRefused
+from smtplib import SMTP
 from email.mime.text import MIMEText
 
 from fob_api import Config
