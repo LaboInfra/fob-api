@@ -16,6 +16,8 @@ for env in ${ENVS[@]}; do
   fi
 done
 
+export DISABLE_DOTENV=True
+
 # switch
 case $app in
   "worker")
@@ -32,7 +34,9 @@ case $app in
     ;;
   "api")
     echo "Starting web"
-    exec uvicorn fob_api.main:app $@
+    # make migrations
+    alembic upgrade head
+    exec uvicorn fob_api.main:app --host 0.0.0.0 --port 8000 $@
     ;;
     *)
         echo "Invalid APP env variable"
