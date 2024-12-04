@@ -50,7 +50,6 @@ services:
     image: ghcr.io/laboinfra/fob-api:${VERSION}
     environment:
       - APP=worker
-      - FLOWER_UNAUTHENTICATED_API=true
       - FIREZONE_ENDPOINT=${FIREZONE_ENDPOINT}
       - FIREZONE_TOKEN=${FIREZONE_TOKEN}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
@@ -71,8 +70,19 @@ services:
     image: ghcr.io/laboinfra/fob-api:${VERSION}
     environment:
       - APP=flower
+      - FLOWER_UNAUTHENTICATED_API=true
+      - FIREZONE_ENDPOINT=${FIREZONE_ENDPOINT}
+      - FIREZONE_TOKEN=${FIREZONE_TOKEN}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_STARTTLS=${MAIL_STARTTLS}
     ports:
       - "127.0.0.1:5555:5555"
     depends_on:
