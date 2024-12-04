@@ -26,8 +26,9 @@ COPY --from=builder /app/requirements.txt .
 RUN pip install -r requirements.txt && rm requirements.txt
 
 ## copy entrypoint
-COPY entrypoint.sh .
+COPY . .
 RUN chmod +x entrypoint.sh
+RUN rm -rfv poetry.lock pyproject.toml
 
 ## copy app
 WORKDIR /app/fob_api

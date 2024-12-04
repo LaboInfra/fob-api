@@ -1,58 +1,90 @@
+# Deployment for pre-production environment
+# docker compose up -d --env-file .env
 volumes:
-  mongo_data:
-  prometheus_data:
-  grafana_data:
+  database:
 
 services:
+
   redis:
     image: redis
-    ports:
-      - "127.0.0.1:6379:6379"
+
+  mariadb:
+    image: mariadb
+    environment:
+      - MARIADB_RANDOM_ROOT_PASSWORD=yes
+      - MARIADB_DATABASE=${DB_NAME}
+      - MARIADB_USER=${DB_USER}
+      - MARIADB_PASSWORD=${DB_PASS}
+    volumes:
+      - database:/var/lib/mysql
 
   api:
-    build: .
-    image: msterhuj/fastonboard_api
-    command: --log-level=debug --workers=6
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: --log-level=info --workers=6
     environment:
       - APP=api
-      - SECRET_KEY=secret
-      - CELERY_BROKER_URL=redis://redis:6379/
-      - CELERY_RESULT_BACKEND=redis://redis:6379/
+      - FIREZONE_ENDPOINT=${FIREZONE_ENDPOINT}
+      - FIREZONE_TOKEN=${FIREZONE_TOKEN}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_STARTTLS=${MAIL_STARTTLS}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8085:8000"
     depends_on:
       - redis
-
-  flower:
-    build: .
-    image: msterhuj/fastonboard_api
-    environment:
-      - APP=flower
-      - CELERY_BROKER_URL=redis://redis:6379/
-      - CELERY_RESULT_BACKEND=redis://redis:6379/
-    ports:
-      - "5555:5555"
-    depends_on:
-      - redis
-
-  beat:
-    build: .
-    image: msterhuj/fastonboard_api
-    command: --loglevel=debug
-    environment:
-      - APP=beat
-      - CELERY_BROKER_URL=redis://redis:6379/
-      - CELERY_RESULT_BACKEND=redis://redis:6379/
-    depends_on:
-      - redis
+      - mariadb
 
   worker:
-    build: .
-    image: msterhuj/fastonboard_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/laboinfra/fob-api:${VERSION}
     environment:
       - APP=worker
-      - CELERY_BROKER_URL=redis://redis:6379/
-      - CELERY_RESULT_BACKEND=redis://redis:6379/
-      - FLOWER_UNAUTHENTICATED_API=true
+      - FIREZONE_ENDPOINT=${FIREZONE_ENDPOINT}
+      - FIREZONE_TOKEN=${FIREZONE_TOKEN}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_STARTTLS=${MAIL_STARTTLS}
     depends_on:
       - redis
+      - mariadb
+
+  flower:
+    image: ghcr.io/laboinfra/fob-api:${VERSION}
+    environment:
+      - APP=flower
+      - FLOWER_UNAUTHENTICATED_API=true
+      - FIREZONE_ENDPOINT=${FIREZONE_ENDPOINT}
+      - FIREZONE_TOKEN=${FIREZONE_TOKEN}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_STARTTLS=${MAIL_STARTTLS}
+    ports:
+      - "127.0.0.1:5555:5555"
+    depends_on:
+      - redis
+      - mariadb

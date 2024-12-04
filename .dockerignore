@@ -1,6 +1,7 @@
 .git/
 .github/
 .devcontainer/
+.vscode/
 .venv/
 __pycache__/
 *.pyc
