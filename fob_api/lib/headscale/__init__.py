@@ -1,14 +1,15 @@
 import requests
-import json
 
 class BaseModel:
 
+    __path__ = ""
     __driver__ = None
 
     def __init__(self, **kwargs):
         if '__driver__' in kwargs:
             self.__driver__ = kwargs['__driver__']
             del kwargs['__driver__']
+        self.__path__ = f'{self.__driver__.server_url}{self.__path__}'
         self.__dict__.update(kwargs)
 
     def list(self):
@@ -36,10 +37,6 @@ class User(BaseModel):
     id: str
     name: str
     created_at: str
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.__path__ = f'{self.__driver__.server_url}{self.__path__}'
 
     def list(self) -> list['User']:
         server_reply = requests.get(f'{self.__path__}', headers=self.__driver__.headers)
@@ -71,9 +68,20 @@ class User(BaseModel):
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
         return server_reply.json()
 
+class Node(BaseModel):
+
+    __path__ = '/api/v1/node'
+
+    def register(self, name: str, mkey: str):
+        server_reply = requests.post(f'{self.__path__}/register?user={name}&key={mkey}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return server_reply.json()
+
 class HeadScale:
 
     user: User
+    node: Node
 
     def __init__(self, server_url: str, api_key: str):
         # Remove trailing slash
@@ -90,3 +98,4 @@ class HeadScale:
 
         # Initialize models
         self.user = User(__driver__=self)
+        self.node = Node(__driver__=self)

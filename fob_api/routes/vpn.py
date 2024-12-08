@@ -4,10 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 
-from fob_api import auth
+from fob_api import auth, headscale_driver
 from fob_api.models.database import User
 from fob_api.models.api import CreateDevice
-from fob_api.tasks import headscale
 
 router = APIRouter(prefix="/devices")
 
@@ -55,7 +54,14 @@ async def register_device_post(request: Request):
             context={"mkey": mkey, "error": "Invalid username or password"}
         )
     
-    # TODO add headscale call to validate mkey and register device
+    try:
+        headscale_driver.node.register(username, mkey)
+    except Exception as e:
+        return template.TemplateResponse(
+            request=request,
+            name="register_device.html.j2",
+            context={"mkey": mkey, "error": str(e)}
+        )
 
     return template.TemplateResponse(
         request=request,
