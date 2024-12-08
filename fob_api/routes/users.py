@@ -75,7 +75,7 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
             expires_at=datetime.now() + timedelta(days=5)
         )
         session.add(user_reset_password)
-        session.commit()
+        
 
         try:
             mail.send_text_mail(user.email, "LaboInfra Account Created",
@@ -86,8 +86,10 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
                 "Welcome to LaboInfra Cloud services"
             )
         except mail.SMTPRecipientsRefused:
-            print("Failed to send email")
-
+            print("Failed to send email, deleting user")
+            session.delete(user)
+        
+        session.commit()
         return user
 
 @router.get("/{username}", response_model=UserInfo, tags=["users"])

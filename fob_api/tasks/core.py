@@ -7,6 +7,7 @@ from fob_api.models.user import User
 from fob_api import engine
 from fob_api.models.user import User
 from fob_api.worker import celery
+from fob_api.tasks import headscale
 
 @celery.task()
 def sync_user(username: str):
@@ -20,7 +21,7 @@ def sync_user(username: str):
       results = session.exec(statement)
       user = results.one()
       user.last_synced = datetime.now()
-      #vpn_user_id = .create_user(username)
+      vpn_user = headscale.create_user(username)
       #allowed_subnets = .sync_user_rules(username)      
       session.add(user)
       session.commit()
@@ -28,7 +29,7 @@ def sync_user(username: str):
 
     return {
       "username": user.username,
-      "_account_id": "vpn_user_id",
-      "allowed_subnets": "allowed_subnets",
+      "vpn": vpn_user,
+      "allowed_subnets": "Not implemented",
       "last_synced": user.last_synced
     }
