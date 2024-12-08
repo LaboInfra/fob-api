@@ -2,12 +2,11 @@ from datetime import datetime
 
 from sqlmodel import Session, select
 from fob_api import engine
-from fob_api.models.user import User
 
-from fob_api import engine
-from fob_api.models.user import User
+from fob_api.models.database import User
 from fob_api.worker import celery
 from fob_api.tasks import headscale
+from fob_api.models.api import SyncInfo
 
 @celery.task()
 def sync_user(username: str):
@@ -26,6 +25,13 @@ def sync_user(username: str):
       session.add(user)
       session.commit()
       session.refresh(user)
+    
+    return SyncInfo(
+        username=user.username,
+        firezone_account_id=str(vpn_user_id),
+        allowed_subnets=allowed_subnets,
+        last_synced=user.last_synced.isoformat()
+    )
 
     return {
       "username": user.username,

@@ -2,38 +2,19 @@ from datetime import datetime, timedelta
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Header
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from celery.result import AsyncResult
 
-from fob_api import auth, engine, TaskInfo, mail
-from fob_api.models.user import User, UserPasswordReset
+from fob_api import auth, engine, mail
+from fob_api.models.api import TaskInfo, SyncInfo
+from fob_api.models.database import User, UserPasswordReset
+from fob_api.models.api import UserCreate, UserInfo, UserResetPassword, UserPasswordUpdate, UserResetPasswordResponse
 from fob_api.tasks.core import sync_user as task_sync_user
 from fob_api.auth import hash_password
 from fob_api.worker import celery
 
 router = APIRouter(prefix="/users")
-
-class UserInfo(BaseModel):
-    username: str
-    email: str
-    is_admin: bool
-    disabled: bool
-
-class UserCreate(BaseModel):
-    username: str
-    email: str
-
-class UserResetPassword(BaseModel):
-    token: str
-    password: str
-
-class UserPasswordUpdate(BaseModel):
-    password: str
-
-class UserResetPasswordResponse(BaseModel):
-    message: str
 
 @router.get("/", response_model=list[UserInfo], tags=["users"])
 def get_users(user: Annotated[User, Depends(auth.get_current_user)]) -> list[UserInfo]:
@@ -125,7 +106,8 @@ def sync_user(user: Annotated[User, Depends(auth.get_current_user)], username: s
     """
     Sync user with to external services
     """
-    if not user.is_admin or user.username != username:
+    if user.username != username and not user.is_admin:
+        print(user.username, username, user.is_admin)
         raise HTTPException(status_code=403, detail="You are not an admin")
     task = task_sync_user.delay(username)
     return TaskInfo(id=task.id, status=task.status, result=None)
@@ -136,12 +118,12 @@ def sync_user_status(user: Annotated[User, Depends(auth.get_current_user)], user
     """
     Get user sync status
     """
-    if not user.is_admin or user.username != username:
+    if user.username != username and not user.is_admin:
         raise HTTPException(status_code=403, detail="You are not an admin")
     result = AsyncResult(task_id, app=celery)
     data = ""
     if result.status == "SUCCESS":
-        data = result.get()
+        data: SyncInfo = result.get().model_dump()
     return TaskInfo(id=task_id, status=result.status, result=data)
 
 @router.post("/{username}/reset-password", response_model=UserResetPasswordResponse, tags=["users"])
@@ -155,14 +137,13 @@ def reset_password(username: str, user_reset_password: UserResetPassword) -> Use
         password = user_reset_password.password
         if not user:
             raise HTTPException(status_code=404, detail="Unable to reset password")
-        user_reset_password = session.exec(
+        user_reset_password: UserPasswordReset = session.exec(
             select(UserPasswordReset)
             .where(UserPasswordReset.token == user_reset_password.token)
             .where(UserPasswordReset.user_id == user.id)
         ).first()
         if not user_reset_password:
             raise HTTPException(status_code=404, detail="Unable to reset password")
-        print(user_reset_password)
         if user_reset_password.expires_at < datetime.now():
             session.delete(user_reset_password)
             session.commit()

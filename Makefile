@@ -1,3 +1,6 @@
+env:
+	make init
+
 init:
 	make clean
 	@echo "Remove old .env"
@@ -19,6 +22,7 @@ init:
 	@echo "MAIL_USERNAME=dev@laboinfra.net" >> .env
 	@echo "MAIL_STARTTLS=no" >> .env
 	@cat .headscale >> .env
+	@echo "" >> .env
 
 	@echo "Create keystone adminrc"
 	@echo "export OS_USERNAME=admin" > adminrc
@@ -28,6 +32,10 @@ init:
 	@echo "export OS_PROJECT_DOMAIN_NAME=Default" >> adminrc
 	@echo "export OS_AUTH_URL=http://keystone:8000/v3/" >> adminrc
 	@echo "export OS_IDENTITY_API_VERSION=3" >> adminrc
+
+	@echo "Add adminrc in .env"
+	@cat adminrc >> .env
+	@sed -i 's/export //g' .env
 
 	@echo "Create Install libs for api"
 	poetry install
