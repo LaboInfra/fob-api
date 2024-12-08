@@ -29,9 +29,9 @@ class SingletonMeta(type):
 class Config(metaclass=SingletonMeta):
 
     database_url: str
-    
-    firezone_endpoint: str
-    firezone_token: str
+
+    headscale_endpoint: str
+    headscale_token: str
 
     celery_broker_url: str
     celery_result_backend: str
@@ -45,6 +45,13 @@ class Config(metaclass=SingletonMeta):
     mail_starttls: bool
     mail_sender: str
 
+    os_username: str
+    os_password: str
+    os_project_name: str
+    os_user_domain_name: str
+    os_project_domain_name: str
+    os_auth_url: str
+
     def __init__(self):
         print("Initializing Config Singleton")
 
@@ -54,17 +61,26 @@ class Config(metaclass=SingletonMeta):
             load_dotenv()
 
         self.database_url = environ.get("DATABASE_URL")
-        self.firezone_endpoint = environ.get("FIREZONE_ENDPOINT")
-        self.firezone_token = environ.get("FIREZONE_TOKEN")
+        self.headscale_endpoint = environ.get("HEADSCALE_ENDPOINT")
+        self.headscale_token = environ.get("HEADSCALE_TOKEN")
         self.celery_broker_url = environ.get("CELERY_BROKER_URL")
         self.celery_result_backend = environ.get("CELERY_RESULT_BACKEND")
+
         self.jwt_secret_key = environ.get("SECRET_KEY")
+
         self.mail_server = environ.get("MAIL_SERVER")
         self.mail_port = int(environ.get("MAIL_PORT"))
         self.mail_username = environ.get("MAIL_USERNAME")
         self.mail_password = environ.get("MAIL_PASSWORD")
         self.mail_starttls = parse_bool(environ.get("MAIL_STARTTLS"))
         self.mail_sender = environ.get("MAIL_SENDER") or self.mail_username
+
+        self.os_username = environ.get("OS_USERNAME")
+        self.os_password = environ.get("OS_PASSWORD")
+        self.os_project_name = environ.get("OS_PROJECT_NAME")
+        self.os_user_domain_name = environ.get("OS_USER_DOMAIN_NAME")
+        self.os_project_domain_name = environ.get("OS_PROJECT_DOMAIN_NAME")
+        self.os_auth_url = environ.get("OS_AUTH_URL")
 
         ignore = ["MAIL_PASSWORD"]
 

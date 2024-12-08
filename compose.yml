@@ -25,8 +25,6 @@ services:
     command: --log-level=info --workers=6
     environment:
       - APP=api
-      - FIREZONE_ENDPOINT=${FIREZONE_ENDPOINT}
-      - FIREZONE_TOKEN=${FIREZONE_TOKEN}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - SECRET_KEY=${JWT_SECRET_KEY}
       - DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}
@@ -50,8 +48,6 @@ services:
     image: ghcr.io/laboinfra/fob-api:${VERSION}
     environment:
       - APP=worker
-      - FIREZONE_ENDPOINT=${FIREZONE_ENDPOINT}
-      - FIREZONE_TOKEN=${FIREZONE_TOKEN}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - SECRET_KEY=${JWT_SECRET_KEY}
       - DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}
@@ -71,8 +67,6 @@ services:
     environment:
       - APP=flower
       - FLOWER_UNAUTHENTICATED_API=true
-      - FIREZONE_ENDPOINT=${FIREZONE_ENDPOINT}
-      - FIREZONE_TOKEN=${FIREZONE_TOKEN}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - SECRET_KEY=${JWT_SECRET_KEY}
       - DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}

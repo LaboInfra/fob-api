@@ -1,1 +1,1 @@
-from .user import User, UserPasswordReset
+from .database.user import User, UserPasswordReset
