@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from sqlmodel import Session, select
 from celery.result import AsyncResult
-from firezone_client import generate_password
 
 from fob_api import auth, engine, TaskInfo, mail
 from fob_api.models.user import User, UserPasswordReset
@@ -61,7 +60,7 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
         user = User(
             email=user_create.email,
             username=user_create.username,
-            password=hash_password(generate_password()),
+            password=hash_password(str(uuid4())),
             is_admin=False,
             disabled=False
         )
@@ -122,7 +121,7 @@ def delete_user(user: Annotated[User, Depends(auth.get_current_user)], username:
 @router.get("/{username}/sync", response_model=TaskInfo, tags=["users"])
 def sync_user(user: Annotated[User, Depends(auth.get_current_user)], username: str) -> TaskInfo:
     """
-    Sync user with Firezone
+    Sync user with to external services
     """
     if not user.is_admin or user.username != username:
         raise HTTPException(status_code=403, detail="You are not an admin")

@@ -9,5 +9,4 @@ celery.conf.update(
     broker_connection_retry_on_startup=True
 )
 # import need to be after celery is defined to avoid circular import
-from fob_api.tasks import firezone
 from fob_api.tasks import core

@@ -5,12 +5,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlmodel import Session, select
 from celery.result import AsyncResult
-from firezone_client import generate_password
 
 from fob_api import auth, engine, TaskInfo
 from fob_api.models.user import User
 from fob_api.tasks.core import sync_user as task_sync_user
-from fob_api.tasks import firezone
 from fob_api.auth import hash_password
 from fob_api.worker import celery
 
@@ -26,8 +24,7 @@ def list_user_devices(user: Annotated[User, Depends(auth.get_current_user)], use
     """
     if not user.is_admin and user.username != username:
         raise HTTPException(status_code=403, detail="You are not an admin")
-    devices = firezone.get_devices_for_user(username)
-    return devices
+    return None
 
 @router.post("/{username}", tags=["vpn"])
 def create_device(user: Annotated[User, Depends(auth.get_current_user)], username: str, device: CreateDevice):
@@ -36,7 +33,7 @@ def create_device(user: Annotated[User, Depends(auth.get_current_user)], usernam
     """
     if not user.is_admin and user.username != username:
         raise HTTPException(status_code=403, detail="You are not an admin")
-    return firezone.create_device(username, device.name)
+    return None
 
 @router.delete("/{username}/{device_id}", tags=["vpn"])
 def delete_device(user: Annotated[User, Depends(auth.get_current_user)], username: str, device_id: str):
@@ -45,9 +42,8 @@ def delete_device(user: Annotated[User, Depends(auth.get_current_user)], usernam
     """
     if not user.is_admin and user.username != username:
         raise HTTPException(status_code=403, detail="You are not an admin")
-    devices = firezone.get_devices_for_user(username)
+    devices = None
     for device in devices:
         if device.id == device_id:
-            return firezone.delete_device(device_id)
+            return None
     raise HTTPException(status_code=404, detail="Device not found")
-    

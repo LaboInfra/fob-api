@@ -29,9 +29,9 @@ class SingletonMeta(type):
 class Config(metaclass=SingletonMeta):
 
     database_url: str
-    
-    firezone_endpoint: str
-    firezone_token: str
+
+    headscale_endpoint: str
+    headscale_token: str
 
     celery_broker_url: str
     celery_result_backend: str
@@ -54,8 +54,8 @@ class Config(metaclass=SingletonMeta):
             load_dotenv()
 
         self.database_url = environ.get("DATABASE_URL")
-        self.firezone_endpoint = environ.get("FIREZONE_ENDPOINT")
-        self.firezone_token = environ.get("FIREZONE_TOKEN")
+        self.headscale_endpoint = environ.get("HEADSCALE_ENDPOINT")
+        self.headscale_token = environ.get("HEADSCALE_TOKEN")
         self.celery_broker_url = environ.get("CELERY_BROKER_URL")
         self.celery_result_backend = environ.get("CELERY_RESULT_BACKEND")
         self.jwt_secret_key = environ.get("SECRET_KEY")

@@ -5,7 +5,6 @@ from pydantic import BaseModel
 
 from fob_api import auth
 from fob_api.models.user import User
-from fob_api.tasks import firezone
 
 router = APIRouter()
 
@@ -22,7 +21,7 @@ def me(user: Annotated[User, Depends(auth.get_current_user)]) -> Me:
     TODO: Add list of projects
     TODO: add status of quotas
     """
-    devices_access = [item.__dict__ for item in firezone.get_devices_for_user(user.username)]
+    devices_access = []
     return Me(
         username=user.username,
         email=user.email,
