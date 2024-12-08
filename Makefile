@@ -1,4 +1,5 @@
 init:
+	make clean
 	@echo "Remove old .env"
 	rm -rfv .env
 
@@ -49,6 +50,9 @@ keystone:
 
 migrate:
 	poetry run alembic upgrade head
+
+clean:
+	find . -name "__pycache__" -type d -exec rm -r {} + -o -name "*.pyc" -exec rm -f {} +
 
 .PHONY: migration
 
