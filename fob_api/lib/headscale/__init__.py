@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List
-
+import json
 import requests
 
 DATE_FORMAT_STRPTIME = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -8,7 +8,12 @@ DATE_FORMAT_STRPTIME = "%Y-%m-%dT%H:%M:%S.%fZ"
 def parse_datetime(date_str: str) -> datetime:
     return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
 
-class BaseModel:
+class DataModel:
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+class BaseModel(DataModel):
 
     __path__ = ""
     __driver__ = None
@@ -18,7 +23,7 @@ class BaseModel:
             self.__driver__ = kwargs['__driver__']
             del kwargs['__driver__']
         self.__path__ = f'{self.__driver__.server_url}{self.__path__}'
-        self.__dict__.update(kwargs)
+        super().__init__(**kwargs)
 
 class User(BaseModel):
     
@@ -237,12 +242,71 @@ class Route(BaseModel):
     def disable(self, router_id: str) -> dict:
         return self.set_status(router_id, False)
 
+class PolicyACL(DataModel):
+    action: str
+    src: List[str]
+    dst: List[str]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if 'src' in kwargs and not isinstance(kwargs['src'], list):
+            self.src = kwargs['src'].split(',')
+        if 'dst' in kwargs and not isinstance(kwargs['dst'], list):
+            self.dst = kwargs['dst'].split(',')
+
+
+class PolicyData(DataModel):
+    
+    acls: List[PolicyACL]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if 'acls' in kwargs:
+            self.acls = [PolicyACL(**acl) for acl in kwargs['acls']]
+
+class Policy(BaseModel):
+
+    __path__ = '/api/v1/policy'
+
+    policy: PolicyData | str
+    updatedAt: str
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # check if policy is a string and load jsondump
+        if 'policy' in kwargs and isinstance(kwargs['policy'], str):
+            self.policy = PolicyData(**json.loads(kwargs['policy']))
+
+    def get(self) -> 'Policy':
+        server_reply = requests.get(f'{self.__path__}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return Policy(__driver__=self.__driver__, **server_reply.json())
+
+    def get_policy_data(self) -> 'PolicyData':
+        return self.get().policy
+
+    def dump(self, policy_data: PolicyData) -> dict:
+        return json.dumps(policy_data.__dict__, default=lambda o: o.__dict__)
+    
+    def update(self, policy_data: PolicyData) -> 'Policy':
+        server_reply = requests.put(
+            f'{self.__path__}',
+            headers=self.__driver__.headers,
+            json={
+                'policy': self.dump(policy_data)
+            })
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return Policy(__driver__=self.__driver__, **server_reply.json())
+
 class HeadScale:
 
     user: User
     preauthkey: PreAuthKey
     node: Node
     route: Route
+    policy: Policy
 
     def __init__(self, server_url: str, api_key: str):
         # Remove trailing slash
@@ -262,3 +326,4 @@ class HeadScale:
         self.preauthkey = PreAuthKey(__driver__=self)
         self.node = Node(__driver__=self)
         self.route = Route(__driver__=self)
+        self.policy = Policy(__driver__=self)
