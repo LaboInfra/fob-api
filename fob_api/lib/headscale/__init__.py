@@ -184,7 +184,9 @@ class Node(BaseModel):
         server_reply = requests.get(f'{self.__path__}/{id}/route', headers=self.__driver__.headers)
         if server_reply.status_code != 200:
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
-        return server_reply.json() # Todo Return json until we have a Route model
+        # Todo Return json until we have a Route model # Warning this will make a circular loop by making Route also depend on Node
+        # Add a function to disable the build for node if coming from node build
+        return server_reply.json()
 
     def set_tags(self, id: str, tags: List[str]) -> 'Node':
         server_reply = requests.post(f'{self.__path__}/{id}/tags', headers=self.__driver__.headers, json={'tags': tags})
@@ -253,7 +255,6 @@ class PolicyACL(DataModel):
             self.src = kwargs['src'].split(',')
         if 'dst' in kwargs and not isinstance(kwargs['dst'], list):
             self.dst = kwargs['dst'].split(',')
-
 
 class PolicyData(DataModel):
     

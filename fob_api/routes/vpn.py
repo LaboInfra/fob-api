@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse
 
 from fob_api import auth, headscale_driver
 from fob_api.models.database import User
+from fob_api.models.api import Device as ApiDeviceResponse
 from fob_api.tasks import headscale as headscale_tasks
 
 router = APIRouter(prefix="/devices")
@@ -73,3 +74,13 @@ async def register_device_post(request: Request):
         name="register_device.html.j2",
         context={"mkey": mkey, "success": "Device registered successfully you can now close this page"}
     )
+
+@router.get("/{username}", tags=["vpn"])
+def list_devices(user: Annotated[User, Depends(auth.get_current_user)], username: str):
+    """
+    List all devices
+    """
+    if user.username != username and not user.is_admin:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    nodes = headscale_driver.node.list(username=username)
+    return [ApiDeviceResponse(**node.__dict__) for node in nodes]

@@ -107,7 +107,6 @@ def sync_user(user: Annotated[User, Depends(auth.get_current_user)], username: s
     Sync user with to external services
     """
     if user.username != username and not user.is_admin:
-        print(user.username, username, user.is_admin)
         raise HTTPException(status_code=403, detail="You are not an admin")
     task = task_sync_user.delay(username)
     return TaskInfo(id=task.id, status=task.status, result=None)
