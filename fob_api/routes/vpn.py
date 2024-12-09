@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse
 
 from fob_api import auth, headscale_driver
 from fob_api.models.database import User
-from fob_api.models.api import CreateDevice
+from fob_api.tasks import headscale as headscale_tasks
 
 router = APIRouter(prefix="/devices")
 
@@ -34,26 +34,31 @@ async def register_device_post(request: Request):
     mkey = form_data.get("mkey")
     username = form_data.get("username")
     password = form_data.get("password")
+
     if not mkey or not username or not password:
         return template.TemplateResponse(
             request=request,
             name="register_device.html.j2",
             context={"mkey": mkey, "error": "All fields are required"}
         )
+
     if not mkey.startswith("mkey:"):
         return template.TemplateResponse(
             request=request,
             name="register_device.html.j2",
             context={"mkey": mkey, "error": "Invalid mkey"}
         )
-    user = auth.basic_auth_validator(username, password)
+
+    user: User = auth.basic_auth_validator(username, password)
     if not user:
         return template.TemplateResponse(
             request=request,
             name="register_device.html.j2",
             context={"mkey": mkey, "error": "Invalid username or password"}
         )
-    
+
+    headscale_tasks.create_user(username)
+
     try:
         headscale_driver.node.register(username, mkey)
     except Exception as e:
