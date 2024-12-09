@@ -20,24 +20,6 @@ class BaseModel:
         self.__path__ = f'{self.__driver__.server_url}{self.__path__}'
         self.__dict__.update(kwargs)
 
-    def list(self):
-        raise NotImplementedError
-
-    def find(self, **kwargs):
-        raise NotImplementedError
-    
-    def get(self, **kwargs):
-        raise NotImplementedError
-    
-    def create(self, **kwargs):
-        raise NotImplementedError
-    
-    def update(self, **kwargs):
-        raise NotImplementedError
-    
-    def delete(self, **kwargs):
-        raise NotImplementedError
-
 class User(BaseModel):
     
     __path__ = '/api/v1/user'
@@ -76,7 +58,7 @@ class User(BaseModel):
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
         return server_reply.json()
 
-class PreAuthKeys(BaseModel):
+class PreAuthKey(BaseModel):
 
     __path__ = '/api/v1/preauthkey'
 
@@ -93,11 +75,11 @@ class PreAuthKeys(BaseModel):
     def is_expired(self) -> bool:
         return parse_datetime(self.expiration) < parse_datetime(datetime.now().strftime(DATE_FORMAT_STRPTIME)) or self.used
 
-    def list(self, username) -> List['PreAuthKeys']:
+    def list(self, username) -> List['PreAuthKey']:
         server_reply = requests.get(f'{self.__path__}?user={username}', headers=self.__driver__.headers)
         if server_reply.status_code != 200:
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
-        return [PreAuthKeys(__driver__=self.__driver__, **key) for key in server_reply.json().get('preAuthKeys', [])]
+        return [PreAuthKey(__driver__=self.__driver__, **key) for key in server_reply.json().get('preAuthKeys', [])]
 
     def create(self,
                username: str, 
@@ -105,7 +87,7 @@ class PreAuthKeys(BaseModel):
                reusable: bool = False,
                ephemeral: bool = False,
                aclTags: List[str] = []
-        ) -> 'PreAuthKeys':
+        ) -> 'PreAuthKey':
         server_reply = requests.post(f'{self.__path__}', headers=self.__driver__.headers, json={
             'user': username,
             'reusable': reusable,
@@ -134,7 +116,7 @@ class Node(BaseModel):
     user: User | dict
     lastSeen: str
     expiry: str
-    preAuthKey: PreAuthKeys | dict
+    preAuthKey: PreAuthKey | dict
     createdAt: str
     registerMethod: str
     forcedTags: List[str]
@@ -148,7 +130,7 @@ class Node(BaseModel):
         if 'user' in kwargs and isinstance(self.user, dict):
             self.user = User(__driver__=self.__driver__, **self.user)
         if 'preAuthKey' in kwargs and isinstance(self.preAuthKey, dict):
-            self.preAuthKey = PreAuthKeys(__driver__=self.__driver__, **self.preAuthKey)
+            self.preAuthKey = PreAuthKey(__driver__=self.__driver__, **self.preAuthKey)
 
     def list(self, username: str = "") -> List['Node']:
         path = f'{self.__path__}' + (f'?user={username}' if username else '')
@@ -211,11 +193,56 @@ class Node(BaseModel):
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
         return Node(__driver__=self.__driver__, **server_reply.json().get('node', {}))
 
+class Route(BaseModel):
+
+    __path__ = '/api/v1/routes'
+
+    id: str
+    node: Node | dict
+    prefix: str
+    advertised: bool
+    enabled: bool
+    isPrimary: bool
+    createdAt: str
+    updatedAt: str
+    deletedAt: str | None
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if 'node' in kwargs and isinstance(kwargs['node'], dict):
+            self.node = Node(__driver__=self.__driver__, **self.node)
+
+    def list(self) -> List['Route']:
+        server_reply = requests.get(f'{self.__path__}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return [Route(__driver__=self.__driver__, **route) for route in server_reply.json().get('routes', [])]
+
+    def delete(self, router_id: str) -> dict:
+        server_reply = requests.delete(f'{self.__path__}/{router_id}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return server_reply.json()
+
+    def set_status(self, router_id: str, active: bool) -> dict:
+        path = f'{self.__path__}/{router_id}/' + ('enable' if active else 'disable')
+        server_reply = requests.post(f'{path}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return server_reply.json()
+
+    def enable(self, router_id: str) -> dict:
+        return self.set_status(router_id, True)
+    
+    def disable(self, router_id: str) -> dict:
+        return self.set_status(router_id, False)
+
 class HeadScale:
 
     user: User
-    preauthkey: PreAuthKeys
+    preauthkey: PreAuthKey
     node: Node
+    route: Route
 
     def __init__(self, server_url: str, api_key: str):
         # Remove trailing slash
@@ -232,5 +259,6 @@ class HeadScale:
 
         # Initialize models
         self.user = User(__driver__=self)
-        self.preauthkey = PreAuthKeys(__driver__=self)
+        self.preauthkey = PreAuthKey(__driver__=self)
         self.node = Node(__driver__=self)
+        self.route = Route(__driver__=self)
