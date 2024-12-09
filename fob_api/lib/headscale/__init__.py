@@ -1,5 +1,12 @@
+from datetime import datetime
 from typing import List
+
 import requests
+
+DATE_FORMAT_STRPTIME = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+def parse_datetime(date_str: str) -> datetime:
+    return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
 
 class BaseModel:
 
@@ -39,7 +46,7 @@ class User(BaseModel):
     name: str
     created_at: str
 
-    def list(self) -> list['User']:
+    def list(self) -> List['User']:
         server_reply = requests.get(f'{self.__path__}', headers=self.__driver__.headers)
         if server_reply.status_code != 200:
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
@@ -69,6 +76,51 @@ class User(BaseModel):
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
         return server_reply.json()
 
+class PreAuthKeys(BaseModel):
+
+    __path__ = '/api/v1/preauthkey'
+
+    user: str
+    id: str
+    key: str
+    reusable: bool
+    ephemeral: bool
+    used: bool
+    expiration: str
+    createdAt: str
+    aclTags: List[str]
+
+    def is_expired(self) -> bool:
+        return parse_datetime(self.expiration) < parse_datetime(datetime.now().strftime(DATE_FORMAT_STRPTIME)) or self.used
+
+    def list(self, username) -> List['PreAuthKeys']:
+        server_reply = requests.get(f'{self.__path__}?user={username}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return [PreAuthKeys(__driver__=self.__driver__, **key) for key in server_reply.json().get('preAuthKeys', [])]
+
+    def create(self,
+               username: str, 
+               expiration: datetime,
+               reusable: bool = False,
+               ephemeral: bool = False,
+               aclTags: List[str] = []
+        ) -> 'PreAuthKeys':
+        server_reply = requests.post(f'{self.__path__}', headers=self.__driver__.headers, json={
+            'user': username,
+            'reusable': reusable,
+            'ephemeral': ephemeral,
+            'expiration': expiration.strftime(DATE_FORMAT_STRPTIME),
+            'aclTags': aclTags
+        })
+        print(server_reply.json())
+    
+    def expire(self, username: str, key_value: str) -> dict:
+        server_reply = requests.post(f'{self.__path__}/expire', headers=self.__driver__.headers, json={'user': username, 'key': key_value})
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return server_reply.json()
+
 class Node(BaseModel):
 
     __path__ = '/api/v1/node'
@@ -77,17 +129,17 @@ class Node(BaseModel):
     machineKey: str
     nodeKey: str
     discoKey: str
-    ipAddresses: list[str]
+    ipAddresses: List[str]
     name: str
     user: User | dict
     lastSeen: str
     expiry: str
-    preAuthKey: dict # Temporary dict until we have a PreAuthKey model
+    preAuthKey: PreAuthKeys | dict
     createdAt: str
     registerMethod: str
-    forcedTags: list[str]
-    invalidTags: list[str]
-    validTags: list[str]
+    forcedTags: List[str]
+    invalidTags: List[str]
+    validTags: List[str]
     givenName: str
     online: bool
 
@@ -95,8 +147,10 @@ class Node(BaseModel):
         super().__init__(**kwargs)
         if 'user' in kwargs and isinstance(self.user, dict):
             self.user = User(__driver__=self.__driver__, **self.user)
+        if 'preAuthKey' in kwargs and isinstance(self.preAuthKey, dict):
+            self.preAuthKey = PreAuthKeys(__driver__=self.__driver__, **self.preAuthKey)
 
-    def list(self, username: str = "") -> list['Node']:
+    def list(self, username: str = "") -> List['Node']:
         path = f'{self.__path__}' + (f'?user={username}' if username else '')
         server_reply = requests.get(f'{path}', headers=self.__driver__.headers)
         if server_reply.status_code != 200:
@@ -145,7 +199,7 @@ class Node(BaseModel):
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
         return server_reply.json() # Todo Return json until we have a Route model
 
-    def set_tags(self, id: str, tags: list[str]) -> 'Node':
+    def set_tags(self, id: str, tags: List[str]) -> 'Node':
         server_reply = requests.post(f'{self.__path__}/{id}/tags', headers=self.__driver__.headers, json={'tags': tags})
         if server_reply.status_code != 200:
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
@@ -160,6 +214,7 @@ class Node(BaseModel):
 class HeadScale:
 
     user: User
+    preauthkey: PreAuthKeys
     node: Node
 
     def __init__(self, server_url: str, api_key: str):
@@ -177,4 +232,5 @@ class HeadScale:
 
         # Initialize models
         self.user = User(__driver__=self)
+        self.preauthkey = PreAuthKeys(__driver__=self)
         self.node = Node(__driver__=self)
