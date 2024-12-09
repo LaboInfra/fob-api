@@ -1,5 +1,3 @@
-from os import environ
-
 from sqlalchemy import Engine
 from sqlmodel import create_engine, SQLModel
 from fob_api import Config

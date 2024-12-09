@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from . import engine
 from .database import create_db_and_tables
-from .models import User
+from .models.database import User
 from .auth import hash_password
 
 
