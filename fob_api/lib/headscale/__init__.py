@@ -1,3 +1,4 @@
+from typing import List
 import requests
 
 class BaseModel:
@@ -72,11 +73,89 @@ class Node(BaseModel):
 
     __path__ = '/api/v1/node'
 
-    def register(self, name: str, mkey: str):
-        server_reply = requests.post(f'{self.__path__}/register?user={name}&key={mkey}', headers=self.__driver__.headers)
+    id: str
+    machineKey: str
+    nodeKey: str
+    discoKey: str
+    ipAddresses: list[str]
+    name: str
+    user: User | dict
+    lastSeen: str
+    expiry: str
+    preAuthKey: dict # Temporary dict until we have a PreAuthKey model
+    createdAt: str
+    registerMethod: str
+    forcedTags: list[str]
+    invalidTags: list[str]
+    validTags: list[str]
+    givenName: str
+    online: bool
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if 'user' in kwargs and isinstance(self.user, dict):
+            self.user = User(__driver__=self.__driver__, **self.user)
+
+    def list(self, username: str = "") -> list['Node']:
+        path = f'{self.__path__}' + (f'?user={username}' if username else '')
+        server_reply = requests.get(f'{path}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return [Node(__driver__=self.__driver__, **node) for node in server_reply.json().get('nodes', [])]
+
+    def get(self, id: str) -> 'Node':
+        server_reply = requests.get(f'{self.__path__}/{id}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return Node(__driver__=self.__driver__, **server_reply.json().get('node', {}))
+
+    def delete(self, id: str) -> dict:
+        server_reply = requests.delete(f'{self.__path__}/{id}', headers=self.__driver__.headers)
         if server_reply.status_code != 200:
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
         return server_reply.json()
+    
+    def register(self, name: str, mkey: str) -> 'Node':
+        server_reply = requests.post(f'{self.__path__}/register?user={name}&key={mkey}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return Node(__driver__=self.__driver__, **server_reply.json().get('node', {}))
+    
+    def backfillips(self, confirmed: bool = False) -> List[str]:
+        server_reply = requests.post(f'{self.__path__}/backfillips?confirmed={str(confirmed).lower()}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return server_reply.json().get("changes", [])
+    
+    def expire(self, id: str) -> 'Node':
+        server_reply = requests.post(f'{self.__path__}/{id}/expire', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return Node(__driver__=self.__driver__, **server_reply.json().get('node', {}))
+
+    def rename(self, id: str, new_name: str) -> 'Node':
+        server_reply = requests.post(f'{self.__path__}/{id}/rename/{new_name}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return Node(__driver__=self.__driver__, **server_reply.json().get('node', {}))
+    
+    def get_route(self, id: str) -> dict:
+        server_reply = requests.get(f'{self.__path__}/{id}/route', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return server_reply.json() # Todo Return json until we have a Route model
+
+    def set_tags(self, id: str, tags: list[str]) -> 'Node':
+        server_reply = requests.post(f'{self.__path__}/{id}/tags', headers=self.__driver__.headers, json={'tags': tags})
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return Node(__driver__=self.__driver__, **server_reply.json().get('node', {}))
+
+    def change_owner(self, id: str, username: str) -> 'Node':
+        server_reply = requests.post(f'{self.__path__}/{id}/user?user={username}', headers=self.__driver__.headers)
+        if server_reply.status_code != 200:
+            raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
+        return Node(__driver__=self.__driver__, **server_reply.json().get('node', {}))
 
 class HeadScale:
 
