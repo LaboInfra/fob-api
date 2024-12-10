@@ -26,13 +26,12 @@ def register_device_get(request: Request, mkey: str):
         context={"mkey": mkey}
     )
 
-@router.post("/register", tags=["vpn"])
-async def register_device_post(request: Request):
+@router.post("/register/{mkey}", tags=["vpn"])
+async def register_device_post(request: Request, mkey: str):
     """
     Handle device registration for headscale require basic auth
     """
     form_data = await request.form()
-    mkey = form_data.get("mkey")
     username = form_data.get("username")
     password = form_data.get("password")
 
