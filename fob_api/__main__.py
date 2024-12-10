@@ -7,7 +7,6 @@ from sys import argv
 from sqlmodel import Session, select
 
 from . import engine
-from .database import create_db_and_tables
 from .models.database import User
 from .auth import hash_password
 
@@ -56,5 +55,4 @@ def main() -> None:
 
 # run main function
 if __name__ == "__main__":
-    create_db_and_tables(engine)
     main()

@@ -5,6 +5,7 @@ from sqlalchemy import pool
 from sqlmodel import SQLModel
 from alembic import context
 from fob_api import Config
+from fob_api.models.database import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -24,12 +25,6 @@ config.set_main_option("sqlalchemy.url", Config().database_url)
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = SQLModel.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -70,7 +65,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, target_metadata=target_metadata,
         )
 
         with context.begin_transaction():
