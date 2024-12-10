@@ -248,6 +248,7 @@ class PolicyACL(DataModel):
     action: str
     src: List[str]
     dst: List[str]
+    proto: str | None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -259,11 +260,95 @@ class PolicyACL(DataModel):
 class PolicyData(DataModel):
     
     acls: List[PolicyACL]
+    hosts: dict[str,str]
+    groups: dict[str,List[str]]
+    tagOwners: dict[str,List[str]]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.hosts = {}
+        self.groups = {}
+        self.tagOwners = {}
         if 'acls' in kwargs:
             self.acls = [PolicyACL(**acl) for acl in kwargs['acls']]
+        if 'hosts' in kwargs:
+            self.hosts = kwargs['hosts']
+        if 'groups' in kwargs:
+            self.groups = kwargs['groups']
+        if 'tagOwners' in kwargs:
+            self.tagOwners = kwargs['tagOwners']
+
+    # Hosts
+    def get_host(self, name: str) -> str:
+        """ Get host ip by name """
+        return self.hosts.get(name, None)
+
+    def set_host(self, name: str, ip: str, overwrite: bool = False):
+        """ Set host ip for a name """
+        if name in self.hosts and not overwrite and self.hosts[name] != ip:
+            raise Exception(f'Host {name} already exists and map to {self.hosts[name]} use overwrite=True to overwrite')
+        self.hosts[name] = ip
+    
+    def del_host(self, name: str):
+        """ Delete host """
+        del self.hosts[name]
+
+    # Groups
+    def get_group(self, name: str) -> List[str]:
+        """ Get group members """
+        return self.groups.get(name, None)
+    
+    def set_group(self, name: str, members: List[str], overwrite: bool = False):
+        """ Set group members """
+        name = "group:" + name
+        if name in self.groups and not overwrite:
+            raise Exception(f'Group {name} already exists use overwrite=True to overwrite')
+        self.groups[name] = members
+    
+    def del_group(self, name: str):
+        """ Delete group """
+        name = "group:" + name
+        del self.groups[name]
+
+    def add_group_member(self, group: str, member: str):
+        """ Add member to group """
+        group = "group:" + group
+        if group not in self.groups:
+            self.groups[group] = []
+        if member not in self.groups[group]:
+            self.groups[group].append(member)
+    
+    def del_group_member(self, group: str, member: str):
+        """ Remove member from group """
+        group = "group:" + group
+        if group not in self.groups:
+            raise Exception(f'Group {group} does not exist')
+        self.groups[group].remove(member)
+
+    # Tag Owners
+    def get_tag_owner(self, tag: str) -> str:
+        """ Get tag owner """
+        return self.tagOwners.get("tag:" + tag, None)
+
+    def set_tag_owner(self, tag: str, member: str, overwrite: bool = False):
+        """ Set tag owner """
+        tag = "tag:" + tag
+        if tag in self.tagOwners and not overwrite:
+            raise Exception(f'Tag {tag} already exists use overwrite=True to overwrite')
+        self.tagOwners[tag] = member
+
+    def del_tag_owner(self, tag: str):
+        """ Delete tag owner """
+        tag = "tag:" + tag
+        del self.tagOwners[tag]
+
+    def add_tag_owner(self, tag: str, member: str):
+        """ Add tag owner """
+        tag = "tag:" + tag
+        if tag not in self.tagOwners:
+            self.tagOwners[tag] = []
+        if member not in self.tagOwners[tag]:
+            self.tagOwners[tag].append(member)
 
 class Policy(BaseModel):
 
