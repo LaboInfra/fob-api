@@ -2,19 +2,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
 
 from fob_api import auth
-from fob_api.models.user import User
+from fob_api.models.database import User
+from fob_api.models.api import Token, TokenValidate
 
 router = APIRouter()
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenValidate(BaseModel):
-    valid: bool
 
 @router.post("/token", response_model=Token, tags=["token"])
 def get_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> str:
