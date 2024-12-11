@@ -256,6 +256,9 @@ class PolicyACL(DataModel):
             self.src = kwargs['src'].split(',')
         if 'dst' in kwargs and not isinstance(kwargs['dst'], list):
             self.dst = kwargs['dst'].split(',')
+        # this is when wee build acl by passing None to proto to avoid it being added to final build
+        if 'proto' in kwargs and not isinstance(kwargs['proto'], str):
+            del self.proto
 
 class PolicyData(DataModel):
     
@@ -266,6 +269,7 @@ class PolicyData(DataModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.acls = []
         self.hosts = {}
         self.groups = {}
         self.tagOwners = {}
@@ -372,8 +376,8 @@ class Policy(BaseModel):
     def get_policy_data(self) -> 'PolicyData':
         return self.get().policy
 
-    def dump(self, policy_data: PolicyData) -> dict:
-        return json.dumps(policy_data.__dict__, default=lambda o: o.__dict__)
+    def dump(self, policy_data: PolicyData) -> str:
+        return json.dumps(policy_data.__dict__, default=lambda o: o.__dict__, sort_keys=True, indent=4)
     
     def update(self, policy_data: PolicyData) -> 'Policy':
         server_reply = requests.put(
