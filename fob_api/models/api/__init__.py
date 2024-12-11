@@ -3,6 +3,7 @@ from .token import Token, TokenValidate
 from .device import (
     CreateDevice,
     Device,
+    DeviceDeleteResponse,
 )
 from .sync import SyncInfo
 from .user import (

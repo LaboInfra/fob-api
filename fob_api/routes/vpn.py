@@ -1,12 +1,13 @@
-from typing import Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from fob_api import auth, headscale_driver
+from fob_api.lib.headscale import Node
 from fob_api.models.database import User
-from fob_api.models.api import Device as ApiDeviceResponse
+from fob_api.models.api import Device as ApiDeviceResponse, DeviceDeleteResponse
 from fob_api.tasks import headscale as headscale_tasks
 
 router = APIRouter(prefix="/devices")
@@ -83,3 +84,17 @@ def list_devices(user: Annotated[User, Depends(auth.get_current_user)], username
         raise HTTPException(status_code=403, detail="You are not an admin")
     nodes = headscale_driver.node.list(username=username)
     return [ApiDeviceResponse(**node.__dict__) for node in nodes]
+
+@router.delete("/{username}/{name}", tags=["vpn"], response_model=DeviceDeleteResponse)
+def delete_device(user: Annotated[User, Depends(auth.get_current_user)], username: str, name: str):
+    """
+    Delete a device
+    """
+    if user.username != username and not user.is_admin:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    user_nodes: List[Node] = headscale_driver.node.list(username=username)
+    for node in user_nodes:
+        if node.givenName == name:
+            headscale_driver.node.delete(node.id)
+            return DeviceDeleteResponse(success=True, msg="Device deleted")
+    return JSONResponse(status_code=404, content=DeviceDeleteResponse(success=False, msg=f"Device '{ name }' not found").model_dump())

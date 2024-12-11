@@ -13,3 +13,7 @@ class Device(BaseModel):
     createdAt: str
     givenName: str
     online: bool
+
+class DeviceDeleteResponse(BaseModel):
+    success: bool
+    msg: str
