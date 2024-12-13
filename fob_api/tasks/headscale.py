@@ -65,7 +65,7 @@ def build_headscale_policy_from_db() -> PolicyData:
             )
     return new_pldt
 
-@celery.task
+@celery.task(name="fastonboard.headscale.sync_policy")
 def update_headscale_policy() -> tuple:
     """
     Update HeadScale Policy Data from Database if there are changes

@@ -29,6 +29,13 @@ celery.conf.update(
         "application/json",
         "application/x-pydantic"
     ],
+    worker_pool_restarts=True,
+    beat_schedule={
+        'fastonboard.headscale.sync_policy': {
+            'task': 'fastonboard.headscale.sync_policy',
+            'schedule': 60 * 15  # every 15min
+        },
+    }
 )
 # import need to be after celery is defined to avoid circular import
-from fob_api.tasks import core
+from fob_api.tasks import core, headscale
