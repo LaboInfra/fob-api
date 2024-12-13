@@ -17,3 +17,9 @@ class Device(BaseModel):
 class DeviceDeleteResponse(BaseModel):
     success: bool
     msg: str
+
+class DevicePreAuthKeyResponse(BaseModel):
+    key: str
+    reusable: bool
+    expiration: str
+    createdAt: str

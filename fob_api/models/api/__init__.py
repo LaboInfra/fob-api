@@ -4,6 +4,7 @@ from .device import (
     CreateDevice,
     Device,
     DeviceDeleteResponse,
+    DevicePreAuthKeyResponse
 )
 from .sync import SyncInfo
 from .user import (

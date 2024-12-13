@@ -100,7 +100,7 @@ class PreAuthKey(BaseModel):
             'expiration': expiration.strftime(DATE_FORMAT_STRPTIME),
             'aclTags': aclTags
         })
-        print(server_reply.json())
+        return PreAuthKey(__driver__=self.__driver__, **server_reply.json().get("preAuthKey"))
     
     def expire(self, username: str, key_value: str) -> dict:
         server_reply = requests.post(f'{self.__path__}/expire', headers=self.__driver__.headers, json={'user': username, 'key': key_value})

@@ -1,11 +1,13 @@
 from typing import Annotated, List
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from fob_api import auth, headscale_driver
-from fob_api.lib.headscale import Node
+from fob_api.lib.headscale import Node, PreAuthKey
+from fob_api.models.api import DevicePreAuthKeyResponse
 from fob_api.models.database import User
 from fob_api.models.api import Device as ApiDeviceResponse, DeviceDeleteResponse
 from fob_api.tasks import headscale as headscale_tasks
@@ -32,6 +34,7 @@ async def register_device_post(request: Request, mkey: str):
     """
     Handle device registration for headscale require basic auth
     """
+    # todo add limit to max allowed devices
     form_data = await request.form()
     username = form_data.get("username")
     password = form_data.get("password")
@@ -98,3 +101,16 @@ def delete_device(user: Annotated[User, Depends(auth.get_current_user)], usernam
             headscale_driver.node.delete(node.id)
             return DeviceDeleteResponse(success=True, msg="Device deleted")
     return JSONResponse(status_code=404, content=DeviceDeleteResponse(success=False, msg=f"Device '{ name }' not found").model_dump())
+
+@router.get("/{username}/preauthkey", tags=["vpn"])
+def generate_preauth_key(user: Annotated[User, Depends(auth.get_current_user)], username: str):
+    """
+    Generate a preauth key active for 5 minutes
+    """
+    # todo add limit to max allowed devices
+    if user.username != username:
+        raise HTTPException(status_code=403, detail="You are not allowed to generate preauth key for other users")
+    headscale_tasks.create_user(username=username)
+    pre_auth_key: PreAuthKey = headscale_driver.preauthkey.create(username=username, expiration=datetime.now() + timedelta(minutes=5))
+    print(pre_auth_key.__dict__)
+    return DevicePreAuthKeyResponse(**pre_auth_key.__dict__)
