@@ -24,7 +24,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
         libffi-dev \
         liblzma-dev \
         mariadb-client \
-        iputils-ping
+        iputils-ping \
+        netcat
 
 RUN curl https://get.docker.com/ | sudo bash -e
 

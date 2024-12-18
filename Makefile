@@ -50,6 +50,9 @@ serv:
 worker:
 	celery -A fob_api.worker worker --loglevel=info
 
+beat:
+	celery -A fob_api.worker beat --loglevel=info
+
 flower:
 	celery -A fob_api.worker flower
 
@@ -61,6 +64,7 @@ migrate:
 
 clean:
 	find . -name "__pycache__" -type d -exec rm -r {} + -o -name "*.pyc" -exec rm -f {} +
+	rm celerybeat-schedule.*
 
 .PHONY: migration
 
