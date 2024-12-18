@@ -21,21 +21,11 @@ def sync_user(username: str):
       user = results.one()
       user.last_synced = datetime.now()
       vpn_user = headscale.create_user(username)
-      #allowed_subnets = .sync_user_rules(username)      
       session.add(user)
       session.commit()
       session.refresh(user)
     
     return SyncInfo(
         username=user.username,
-        firezone_account_id=str(vpn_user_id),
-        allowed_subnets=allowed_subnets,
         last_synced=user.last_synced.isoformat()
     )
-
-    return {
-      "username": user.username,
-      "vpn": vpn_user,
-      "allowed_subnets": "Not implemented",
-      "last_synced": user.last_synced
-    }
