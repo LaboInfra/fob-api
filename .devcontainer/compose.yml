@@ -12,12 +12,13 @@ services:
     volumes:
       - ..:/workspace
       - /var/run/docker.sock:/var/run/docker.sock
-
+ 
   maildev:
     image: maildev/maildev
     container_name: maildev
     ports:
       - "1080:1080"
+      - "1025:1025"
 
   keystone:
     image: docker.io/openstackhelm/keystone:2024.1-ubuntu_jammy

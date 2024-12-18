@@ -252,3 +252,32 @@ def delete_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)],
         session.commit()
         new_group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.member == username))
         return UserMeshGroup(username=username, groups=[group.name for group in new_group])
+
+@router.post("/forgot-password", response_model=None, tags=["users"])
+def forgot_password(email: str):
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.email == email)).first()
+        if not user:
+            raise HTTPException(status_code=418, detail="If you are a teapot, I am a coffee pot")
+        user_reset_password = UserPasswordReset(
+            user_id=user.id,
+            token=str(uuid4()),
+            source_ip="",
+            expires_at=datetime.now() + timedelta(minutes=5)
+        )
+        session.add(user_reset_password)
+        session.commit()
+        try:
+            mail.send_text_mail(user.email, "LaboInfra Password Reset",
+                "You have requested a password reset for your LaboInfra account.\n" +
+                "You can reset your password by running the following command:\n"+
+                f"\t`labctl reset-password --username {user.username} --token {user_reset_password.token}`\n" +
+                "This token will expire in 5 minutes.\n" +
+                "If you did not request this, please ignore this email."
+            )
+        except mail.SMTPRecipientsRefused:
+            print("Failed to send email, deleting user")
+            session.delete(user)
+            session.commit()
+            
+    raise HTTPException(status_code=418, detail="If you are a teapot, I am a coffee pot")
