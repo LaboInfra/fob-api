@@ -147,6 +147,17 @@ def reset_password(username: str, user_reset_password: UserResetPassword) -> Use
             session.delete(user_reset_password)
             session.commit()
             raise HTTPException(status_code=404, detail="Unable to reset password")
+        # Check password strength (i know this is not the best way to do but i am lazy :p )
+        if len(password) < 12:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
+        if not any(char.isdigit() for char in password):
+            raise HTTPException(status_code=400, detail="Password must contain at least one digit")
+        if not any(char.isupper() for char in password):
+            raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
+        if not any(char.islower() for char in password):
+            raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
+        if not any(char in "!@#$%^&*()-_=+[]{}|;:,.<>?/" for char in password):
+            raise HTTPException(status_code=400, detail="Password must contain at least one special character")
         user.password = hash_password(password)
         session.delete(user_reset_password)
         session.commit()

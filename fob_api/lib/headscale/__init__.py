@@ -26,9 +26,9 @@ class BaseModel(DataModel):
         super().__init__(**kwargs)
 
 class User(BaseModel):
-    
+
     __path__ = '/api/v1/user'
-    
+
     id: str
     name: str
     created_at: str
@@ -101,7 +101,7 @@ class PreAuthKey(BaseModel):
             'aclTags': aclTags
         })
         return PreAuthKey(__driver__=self.__driver__, **server_reply.json().get("preAuthKey"))
-    
+
     def expire(self, username: str, key_value: str) -> dict:
         server_reply = requests.post(f'{self.__path__}/expire', headers=self.__driver__.headers, json={'user': username, 'key': key_value})
         if server_reply.status_code != 200:
@@ -240,7 +240,7 @@ class Route(BaseModel):
 
     def enable(self, router_id: str) -> dict:
         return self.set_status(router_id, True)
-    
+
     def disable(self, router_id: str) -> dict:
         return self.set_status(router_id, False)
 
