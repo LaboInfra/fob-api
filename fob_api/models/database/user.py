@@ -13,7 +13,6 @@ class User(SQLModel, table=True):
     is_admin: bool = False
     disabled: bool = False
     last_synced: datetime = Field(default=datetime.now())
-    allowed_subnets: str = Field(default="")
 
 class UserPasswordReset(SQLModel, table=True):
     """

@@ -2,39 +2,20 @@ from datetime import datetime, timedelta
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Header
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from celery.result import AsyncResult
-from firezone_client import generate_password
 
-from fob_api import auth, engine, TaskInfo, mail
-from fob_api.models.user import User, UserPasswordReset
+from fob_api import auth, engine, mail
+from fob_api.models.api import TaskInfo, SyncInfo
+from fob_api.models.database import User, UserPasswordReset
+from fob_api.models.api import UserCreate, UserInfo, UserResetPassword, UserPasswordUpdate, UserResetPasswordResponse, UserMeshGroup
+from fob_api.models.database import HeadScalePolicyGroupMember
 from fob_api.tasks.core import sync_user as task_sync_user
 from fob_api.auth import hash_password
 from fob_api.worker import celery
 
 router = APIRouter(prefix="/users")
-
-class UserInfo(BaseModel):
-    username: str
-    email: str
-    is_admin: bool
-    disabled: bool
-
-class UserCreate(BaseModel):
-    username: str
-    email: str
-
-class UserResetPassword(BaseModel):
-    token: str
-    password: str
-
-class UserPasswordUpdate(BaseModel):
-    password: str
-
-class UserResetPasswordResponse(BaseModel):
-    message: str
 
 @router.get("/", response_model=list[UserInfo], tags=["users"])
 def get_users(user: Annotated[User, Depends(auth.get_current_user)]) -> list[UserInfo]:
@@ -61,7 +42,7 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
         user = User(
             email=user_create.email,
             username=user_create.username,
-            password=hash_password(generate_password()),
+            password=hash_password(str(uuid4())),
             is_admin=False,
             disabled=False
         )
@@ -76,7 +57,7 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
             expires_at=datetime.now() + timedelta(days=5)
         )
         session.add(user_reset_password)
-        session.commit()
+        
 
         try:
             mail.send_text_mail(user.email, "LaboInfra Account Created",
@@ -87,8 +68,10 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
                 "Welcome to LaboInfra Cloud services"
             )
         except mail.SMTPRecipientsRefused:
-            print("Failed to send email")
-
+            print("Failed to send email, deleting user")
+            session.delete(user)
+        
+        session.commit()
         return user
 
 @router.get("/{username}", response_model=UserInfo, tags=["users"])
@@ -122,9 +105,9 @@ def delete_user(user: Annotated[User, Depends(auth.get_current_user)], username:
 @router.get("/{username}/sync", response_model=TaskInfo, tags=["users"])
 def sync_user(user: Annotated[User, Depends(auth.get_current_user)], username: str) -> TaskInfo:
     """
-    Sync user with Firezone
+    Sync user with to external services
     """
-    if not user.is_admin or user.username != username:
+    if user.username != username and not user.is_admin:
         raise HTTPException(status_code=403, detail="You are not an admin")
     task = task_sync_user.delay(username)
     return TaskInfo(id=task.id, status=task.status, result=None)
@@ -135,12 +118,12 @@ def sync_user_status(user: Annotated[User, Depends(auth.get_current_user)], user
     """
     Get user sync status
     """
-    if not user.is_admin or user.username != username:
+    if user.username != username and not user.is_admin:
         raise HTTPException(status_code=403, detail="You are not an admin")
     result = AsyncResult(task_id, app=celery)
     data = ""
     if result.status == "SUCCESS":
-        data = result.get()
+        data: SyncInfo = result.get().model_dump()
     return TaskInfo(id=task_id, status=result.status, result=data)
 
 @router.post("/{username}/reset-password", response_model=UserResetPasswordResponse, tags=["users"])
@@ -154,18 +137,28 @@ def reset_password(username: str, user_reset_password: UserResetPassword) -> Use
         password = user_reset_password.password
         if not user:
             raise HTTPException(status_code=404, detail="Unable to reset password")
-        user_reset_password = session.exec(
+        user_reset_password: UserPasswordReset = session.exec(
             select(UserPasswordReset)
             .where(UserPasswordReset.token == user_reset_password.token)
             .where(UserPasswordReset.user_id == user.id)
         ).first()
         if not user_reset_password:
             raise HTTPException(status_code=404, detail="Unable to reset password")
-        print(user_reset_password)
         if user_reset_password.expires_at < datetime.now():
             session.delete(user_reset_password)
             session.commit()
             raise HTTPException(status_code=404, detail="Unable to reset password")
+        # Check password strength (i know this is not the best way to do but i am lazy :p )
+        if len(password) < 12:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
+        if not any(char.isdigit() for char in password):
+            raise HTTPException(status_code=400, detail="Password must contain at least one digit")
+        if not any(char.isupper() for char in password):
+            raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
+        if not any(char.islower() for char in password):
+            raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
+        if not any(char in "!@#$%^&*()-_=+[]{}|;:,.<>?/" for char in password):
+            raise HTTPException(status_code=400, detail="Password must contain at least one special character")
         user.password = hash_password(password)
         session.delete(user_reset_password)
         session.commit()
@@ -187,3 +180,75 @@ def change_password(user: Annotated[User, Depends(auth.get_current_user)], usern
         session.add(user)
         session.commit()
         return UserResetPasswordResponse(message="Password changed successfully")
+
+@router.get("/{username}/vpn-group", response_model=UserMeshGroup, tags=["users"])
+def get_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], username: str) -> UserMeshGroup:
+    """
+    Get user vpn group
+    """
+    if user.username != username and not user.is_admin:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        groups = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.member == user.username))
+        return UserMeshGroup(username=user.username, groups=[group.name for group in groups])
+
+@router.post("/{username}/vpn-group/{group_name}", response_model=UserMeshGroup, tags=["users"])
+def add_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], username: str, group_name: str) -> UserMeshGroup:
+    """
+    Add user to vpn group
+    """
+    if user.username != username and not user.is_admin:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        # Check if group exists
+        group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.name == group_name)).first()
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        # Check if user is already in group
+        group_member = session.exec(
+            select(HeadScalePolicyGroupMember)
+            .where(HeadScalePolicyGroupMember.name == group_name)
+            .where(HeadScalePolicyGroupMember.member == username)
+        ).first()
+        if group_member:
+            raise HTTPException(status_code=400, detail="User is already in group")
+        # Add user to group
+        group_member = HeadScalePolicyGroupMember(name=group_name, member=username)
+        session.add(group_member)
+        session.commit()
+        new_group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.member == username))
+        return UserMeshGroup(username=username, groups=[group.name for group in new_group])
+
+@router.delete("/{username}/vpn-group/{group_name}", response_model=UserMeshGroup, tags=["users"])
+def delete_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], username: str, group_name: str) -> UserMeshGroup:
+    """
+    Remove user from vpn group
+    """
+    if user.username != username and not user.is_admin:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        # Check if group exists
+        group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.name == group_name)).first()
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        # Check if user is in group
+        group_member = session.exec(
+            select(HeadScalePolicyGroupMember)
+            .where(HeadScalePolicyGroupMember.name == group_name)
+            .where(HeadScalePolicyGroupMember.member == username)
+        ).first()
+        if not group_member:
+            raise HTTPException(status_code=404, detail="User is not in group")
+        session.delete(group_member)
+        session.commit()
+        new_group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.member == username))
+        return UserMeshGroup(username=username, groups=[group.name for group in new_group])
