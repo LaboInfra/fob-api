@@ -14,4 +14,5 @@ from .user import (
     UserResetPassword,
     UserPasswordUpdate,
     UserResetPasswordResponse,
+    UserMeshGroup
 )

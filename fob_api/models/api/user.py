@@ -1,3 +1,4 @@
+from typing import List
 from pydantic import BaseModel
 
 class Me(BaseModel):
@@ -24,3 +25,7 @@ class UserPasswordUpdate(BaseModel):
 
 class UserResetPasswordResponse(BaseModel):
     message: str
+
+class UserMeshGroup(BaseModel):
+    username: str
+    groups: List[str]

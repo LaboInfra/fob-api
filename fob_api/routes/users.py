@@ -9,7 +9,8 @@ from celery.result import AsyncResult
 from fob_api import auth, engine, mail
 from fob_api.models.api import TaskInfo, SyncInfo
 from fob_api.models.database import User, UserPasswordReset
-from fob_api.models.api import UserCreate, UserInfo, UserResetPassword, UserPasswordUpdate, UserResetPasswordResponse
+from fob_api.models.api import UserCreate, UserInfo, UserResetPassword, UserPasswordUpdate, UserResetPasswordResponse, UserMeshGroup
+from fob_api.models.database import HeadScalePolicyGroupMember
 from fob_api.tasks.core import sync_user as task_sync_user
 from fob_api.auth import hash_password
 from fob_api.worker import celery
@@ -179,3 +180,75 @@ def change_password(user: Annotated[User, Depends(auth.get_current_user)], usern
         session.add(user)
         session.commit()
         return UserResetPasswordResponse(message="Password changed successfully")
+
+@router.get("/{username}/vpn-group", response_model=UserMeshGroup, tags=["users"])
+def get_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], username: str) -> UserMeshGroup:
+    """
+    Get user vpn group
+    """
+    if user.username != username and not user.is_admin:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        groups = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.member == user.username))
+        return UserMeshGroup(username=user.username, groups=[group.name for group in groups])
+
+@router.post("/{username}/vpn-group/{group_name}", response_model=UserMeshGroup, tags=["users"])
+def add_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], username: str, group_name: str) -> UserMeshGroup:
+    """
+    Add user to vpn group
+    """
+    if user.username != username and not user.is_admin:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        # Check if group exists
+        group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.name == group_name)).first()
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        # Check if user is already in group
+        group_member = session.exec(
+            select(HeadScalePolicyGroupMember)
+            .where(HeadScalePolicyGroupMember.name == group_name)
+            .where(HeadScalePolicyGroupMember.member == username)
+        ).first()
+        if group_member:
+            raise HTTPException(status_code=400, detail="User is already in group")
+        # Add user to group
+        group_member = HeadScalePolicyGroupMember(name=group_name, member=username)
+        session.add(group_member)
+        session.commit()
+        new_group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.member == username))
+        return UserMeshGroup(username=username, groups=[group.name for group in new_group])
+
+@router.delete("/{username}/vpn-group/{group_name}", response_model=UserMeshGroup, tags=["users"])
+def delete_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], username: str, group_name: str) -> UserMeshGroup:
+    """
+    Remove user from vpn group
+    """
+    if user.username != username and not user.is_admin:
+        raise HTTPException(status_code=403, detail="You are not an admin")
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        # Check if group exists
+        group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.name == group_name)).first()
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        # Check if user is in group
+        group_member = session.exec(
+            select(HeadScalePolicyGroupMember)
+            .where(HeadScalePolicyGroupMember.name == group_name)
+            .where(HeadScalePolicyGroupMember.member == username)
+        ).first()
+        if not group_member:
+            raise HTTPException(status_code=404, detail="User is not in group")
+        session.delete(group_member)
+        session.commit()
+        new_group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.member == username))
+        return UserMeshGroup(username=username, groups=[group.name for group in new_group])
