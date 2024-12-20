@@ -15,16 +15,3 @@ with this api you can:
 ### Environment Variables
 
 > Check the Makefile for more information
-
-- SECRET_KEY: a secret key to encrypt the tokens (required) use (`openssl rand -hex 32`)
-- DATABASE_URL: the database url (not required) default `sqlite:///db.sqlite3`
-- CELERY_BROKER_URL: the celery broker url (not required) default `redis://localhost:6379`
-- CELERY_RESULT_BACKEND: the celery result backend (not required) default `redis://localhost:6379`
-
-Dev environment:
-
-```bash
-SECRET_KEY=dev_secret_key
-CELERY_BROKER_URL=redis://redis:6379
-CELERY_RESULT_BACKEND=redis://redis:6379
-```

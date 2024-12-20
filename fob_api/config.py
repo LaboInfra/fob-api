@@ -66,7 +66,7 @@ class Config(metaclass=SingletonMeta):
         self.celery_broker_url = environ.get("CELERY_BROKER_URL")
         self.celery_result_backend = environ.get("CELERY_RESULT_BACKEND")
 
-        self.jwt_secret_key = environ.get("SECRET_KEY")
+        self.jwt_secret_key = environ.get("JWT_SECRET_KEY")
 
         self.mail_server = environ.get("MAIL_SERVER")
         self.mail_port = int(environ.get("MAIL_PORT"))
