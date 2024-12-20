@@ -1,5 +1,4 @@
 # Deployment for pre-production environment
-# docker compose up -d --env-file .env
 volumes:
   database:
 
@@ -17,24 +16,19 @@ services:
       - MARIADB_PASSWORD=${DB_PASS}
     volumes:
       - database:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
     command: --log-level=info --workers=6
+    image: ghcr.io/laboinfra/fob-api:${VERSION}
+    env_file:
+      - .env
     environment:
       - APP=api
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - SECRET_KEY=${JWT_SECRET_KEY}
-      - DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
-      - MAIL_SERVER=${MAIL_SERVER}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_STARTTLS=${MAIL_STARTTLS}
     ports:
       - "127.0.0.1:8085:8000"
     depends_on:
@@ -46,39 +40,24 @@ services:
       context: .
       dockerfile: Dockerfile
     image: ghcr.io/laboinfra/fob-api:${VERSION}
+    env_file:
+      - .env
     environment:
       - APP=worker
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - SECRET_KEY=${JWT_SECRET_KEY}
-      - DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
-      - MAIL_SERVER=${MAIL_SERVER}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_STARTTLS=${MAIL_STARTTLS}
     depends_on:
       - redis
       - mariadb
 
-  flower:
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: ghcr.io/laboinfra/fob-api:${VERSION}
+    command: --loglevel=debug
+    env_file:
+      - .env
     environment:
-      - APP=flower
-      - FLOWER_UNAUTHENTICATED_API=true
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - SECRET_KEY=${JWT_SECRET_KEY}
-      - DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
-      - MAIL_SERVER=${MAIL_SERVER}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_STARTTLS=${MAIL_STARTTLS}
-    ports:
-      - "127.0.0.1:5555:5555"
+      - APP=beat
     depends_on:
       - redis
       - mariadb
