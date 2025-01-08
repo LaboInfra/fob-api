@@ -23,6 +23,7 @@ init:
 	@echo "MAIL_STARTTLS=no" >> .env
 	@cat .headscale >> .env
 	@echo "" >> .env
+	@rm -rf .headscale
 
 	@echo "Create keystone adminrc"
 	@echo "export OS_USERNAME=admin" > adminrc
@@ -64,7 +65,7 @@ migrate:
 
 clean:
 	find . -name "__pycache__" -type d -exec rm -r {} + -o -name "*.pyc" -exec rm -f {} +
-	rm celerybeat-schedule.*
+	rm -f celerybeat-schedule.*
 
 .PHONY: migration
 
