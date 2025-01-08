@@ -6,6 +6,10 @@ from .device import (
     DeviceDeleteResponse,
     DevicePreAuthKeyResponse
 )
+from .headscale import (
+    HeadScalePolicyAcl,
+    HeadScalePolicyAclCreate
+)
 from .sync import SyncInfo
 from .user import (
     Me,
