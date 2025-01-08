@@ -21,7 +21,13 @@ def list(user: Annotated[User, Depends(auth.get_current_user)]) -> List[HeadScal
         raise HTTPException(status_code=403, detail="Not an admin")
     with Session(engine) as session:
         acls = session.exec(select(HeadScalePolicyACL)).all()
-    return acls
+    return [HeadScalePolicyAclAPI(
+        id=acl.id,
+        action=acl.action,
+        src=acl.src.split(","),
+        dst=acl.dst.split(","),
+        proto=acl.proto,
+    ) for acl in acls]
 
 @router.post("/acls/", tags=["vpn"])
 def create(
@@ -52,3 +58,26 @@ def create(
             dst=new_acl.dst.split(","),
             proto=new_acl.proto,
         )
+
+@router.delete("/acls/{acl_id}/", tags=["vpn"])
+def delete(
+    acl_id: int,
+    user: Annotated[User, Depends(auth.get_current_user)],
+) -> None:
+    """
+    Delete a HeadScale ACL from Policy
+    """
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Not an admin")
+    with Session(engine) as session:
+        acl = session.get(HeadScalePolicyACL, acl_id)
+        if not acl:
+            raise HTTPException(status_code=404, detail="ACL not found")
+        session.delete(acl)
+        session.commit()
+        try:
+            update_headscale_policy()
+        except Exception as e:
+            session.delete(acl)
+            session.commit()
+            raise HTTPException(status_code=400, detail=f"Failed to apply new policy: {e}")
