@@ -206,10 +206,6 @@ def add_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], us
         user = session.exec(select(User).where(User.username == username)).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        # Check if group exists
-        group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.name == group_name)).first()
-        if not group:
-            raise HTTPException(status_code=404, detail="Group not found")
         # Check if user is already in group
         group_member = session.exec(
             select(HeadScalePolicyGroupMember)
@@ -236,10 +232,6 @@ def delete_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)],
         user = session.exec(select(User).where(User.username == username)).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        # Check if group exists
-        group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.name == group_name)).first()
-        if not group:
-            raise HTTPException(status_code=404, detail="Group not found")
         # Check if user is in group
         group_member = session.exec(
             select(HeadScalePolicyGroupMember)
