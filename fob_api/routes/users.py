@@ -17,7 +17,7 @@ from fob_api.worker import celery
 
 router = APIRouter(prefix="/users")
 
-@router.get("/", response_model=list[UserInfo], tags=["users"])
+@router.get("/", response_model=list[UserInfo], tags=["users", "admin"])
 def get_users(user: Annotated[User, Depends(auth.get_current_user)]) -> list[UserInfo]:
     """
     Returns all users
@@ -27,7 +27,7 @@ def get_users(user: Annotated[User, Depends(auth.get_current_user)]) -> list[Use
     with Session(engine) as session:
         return [item for item in session.exec(select(User))] 
 
-@router.post("/", response_model=UserInfo, tags=["users"])
+@router.post("/", response_model=UserInfo, tags=["users", "admin"])
 def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_create: UserCreate) -> UserInfo:
     """
     Create a new user
@@ -195,12 +195,12 @@ def get_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], us
         groups = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.member == user.username))
         return UserMeshGroup(username=user.username, groups=[group.name for group in groups])
 
-@router.post("/{username}/vpn-group/{group_name}", response_model=UserMeshGroup, tags=["users"])
+@router.post("/{username}/vpn-group/{group_name}", response_model=UserMeshGroup, tags=["users", "admin"])
 def add_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], username: str, group_name: str) -> UserMeshGroup:
     """
     Add user to vpn group
     """
-    if user.username != username and not user.is_admin:
+    if not user.is_admin:
         raise HTTPException(status_code=403, detail="You are not an admin")
     with Session(engine) as session:
         user = session.exec(select(User).where(User.username == username)).first()
@@ -221,12 +221,12 @@ def add_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], us
         new_group = session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.member == username))
         return UserMeshGroup(username=username, groups=[group.name for group in new_group])
 
-@router.delete("/{username}/vpn-group/{group_name}", response_model=UserMeshGroup, tags=["users"])
+@router.delete("/{username}/vpn-group/{group_name}", response_model=UserMeshGroup, tags=["users", "admin"])
 def delete_user_vpn_group(user: Annotated[User, Depends(auth.get_current_user)], username: str, group_name: str) -> UserMeshGroup:
     """
     Remove user from vpn group
     """
-    if user.username != username and not user.is_admin:
+    if not user.is_admin:
         raise HTTPException(status_code=403, detail="You are not an admin")
     with Session(engine) as session:
         user = session.exec(select(User).where(User.username == username)).first()

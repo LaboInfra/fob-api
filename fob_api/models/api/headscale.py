@@ -9,3 +9,10 @@ class HeadScalePolicyAclCreate(BaseModel):
 
 class HeadScalePolicyAcl(HeadScalePolicyAclCreate):
     id: int
+
+class HeadScalePolicyHostCreate(BaseModel):
+    name: str
+    ip: str
+
+class HeadScalePolicyHost(HeadScalePolicyHostCreate):
+    id: int

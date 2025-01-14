@@ -23,7 +23,6 @@ init:
 	@echo "MAIL_STARTTLS=no" >> .env
 	@cat .headscale >> .env
 	@echo "" >> .env
-	@rm -rf .headscale
 
 	@echo "Create keystone adminrc"
 	@echo "export OS_USERNAME=admin" > adminrc

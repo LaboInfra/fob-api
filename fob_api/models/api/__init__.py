@@ -8,7 +8,9 @@ from .device import (
 )
 from .headscale import (
     HeadScalePolicyAcl,
-    HeadScalePolicyAclCreate
+    HeadScalePolicyAclCreate,
+    HeadScalePolicyHost,
+    HeadScalePolicyHostCreate
 )
 from .sync import SyncInfo
 from .user import (
