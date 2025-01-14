@@ -8,3 +8,10 @@ from .headscale import (
     HeadScalePolicyTagOwnerMember,
     HeadScalePolicyHost
 )
+from .openstack import (
+    QuotaType,
+    UserQuota,
+    Project,
+    ProjectUserMembership,
+    UserQuotaShare
+)
