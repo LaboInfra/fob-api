@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from celery.result import AsyncResult
 
 from fob_api import auth, engine, mail
+from fob_api import Config
 from fob_api.models.api import TaskInfo, SyncInfo
 from fob_api.models.database import User, UserPasswordReset
 from fob_api.models.api import UserCreate, UserInfo, UserResetPassword, UserPasswordUpdate, UserResetPasswordResponse, UserMeshGroup
@@ -70,9 +71,17 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
         except mail.SMTPRecipientsRefused:
             print("Failed to send email, deleting user")
             session.delete(user)
+        except ConnectionRefusedError:
+            config = Config()
+            print(f"Failed to connect to mail server, leaving user in database ({config.mail_server}:{config.mail_port})")
         
         session.commit()
-        return user
+        return UserInfo(
+            username=user.username,
+            email=user.email,
+            is_admin=user.is_admin,
+            disabled=user.disabled
+        )
 
 @router.get("/{username}", response_model=UserInfo, tags=["users"])
 def get_user(user: Annotated[User, Depends(auth.get_current_user)], username: str) -> UserInfo:

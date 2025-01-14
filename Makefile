@@ -17,7 +17,7 @@ init:
 	@echo "JWT_SECRET_KEY=dev_secret_key" >> .env
 	@echo "CELERY_BROKER_URL=redis://redis:6379" >> .env
 	@echo "CELERY_RESULT_BACKEND=redis://redis:6379" >> .env
-	@echo "MAIL_PORT=1050" >> .env
+	@echo "MAIL_PORT=1025" >> .env
 	@echo "MAIL_SERVER=maildev" >> .env
 	@echo "MAIL_USERNAME=dev@laboinfra.net" >> .env
 	@echo "MAIL_STARTTLS=no" >> .env
