@@ -11,6 +11,10 @@ class QuotaType(str, PyEnum):
     MEMORY = "mem"
     STORAGE = "sto"
 
+    @classmethod
+    def from_str(cls, value: str) -> "QuotaType":
+        return cls(value)
+
 class UserQuota(SQLModel, table=True):
     """
     Represents one quota adjustment for a user
