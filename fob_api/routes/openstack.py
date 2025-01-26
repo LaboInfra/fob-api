@@ -30,8 +30,8 @@ def list_openstack_project_for_user(username: str, user: Annotated[User, Depends
         name=project.name
     ) for project in projects]
 
-@router.post("/projects/", tags=["openstack"])
-def create_openstack_project(project: OpenStackProjectCreateAPI, user: Annotated[User, Depends(auth.get_current_user)]) -> OpenStackProjectAPI | None:
+@router.post("/projects/{project_name}", tags=["openstack"])
+def create_openstack_project(project_name: str, user: Annotated[User, Depends(auth.get_current_user)]) -> OpenStackProjectAPI | None:
     """
     Create a new OpenStack project
     """
@@ -39,9 +39,9 @@ def create_openstack_project(project: OpenStackProjectCreateAPI, user: Annotated
     
     with Session(engine) as session:
         projects = session.exec(select(Project).where(Project.owner_id == user.id)).all()
-        if len(projects) >= 5:
-            raise HTTPException(status_code=400, detail="You cannot create more than 5 projects")
-        project_name = project.name + "-" + random_end_uid()
+        if len(projects) >= 3:
+            raise HTTPException(status_code=400, detail="You cannot create more than 3 projects")
+        project_name = project_name + "-" + random_end_uid()
         new_project = Project(name=project_name, owner_id=user.id)
         session.add(new_project)
 
@@ -84,7 +84,7 @@ def reset_openstack_user_password(username: str, user: Annotated[User, Depends(a
         user_find = session.exec(select(User).where(User.username == username)).first()
         if not user_find:
             raise HTTPException(status_code=404, detail="User not found")
-        if user_find.id != user.id or not user.is_admin:
+        if user_find.id != user.id and not user.is_admin:
             raise HTTPException(status_code=403, detail="Not allowed to reset password for this user")
         rand_password = random_password()
         openstack_set_user_password(username, rand_password)

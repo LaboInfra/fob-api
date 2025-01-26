@@ -1,7 +1,7 @@
 from sqlmodel import Session, select
 from uuid import UUID
 
-from fob_api.models.database import User
+from fob_api.models.database import User, HeadScalePolicyGroupMember
 from fob_api.worker import celery
 from fob_api import engine, headscale_driver
 from fob_api.lib.headscale import PolicyACL, PolicyData
@@ -29,6 +29,23 @@ def get_or_create_user(username: str):
             print(f"User {user.email} not found in HeadScale VPN, creating...")
             headscale_driver.user.create(name=user.username)
             return get_or_create_user(username)
+
+def add_user_to_group(username: str, group_name: str):
+    """
+    Add User to Group in HeadScale Controller
+    """
+    with Session(engine) as session:
+        user_headscale = get_or_create_user(username)
+        user_db = session.exec(select(User).where(User.username == username)).first()
+        # no need to check if user exists in db, it should exist with the get or create user of headscale
+        # check if user is already in group
+        if session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.name == group_name and HeadScalePolicyGroupMember.member == user_db.username)).first():
+            print(f"User {username} is already in group {group_name}")
+            return
+        print(f"Adding user {username} to group {group_name}")
+        session.add(HeadScalePolicyGroupMember(name=group_name, member=user_db.username))
+        session.commit()
+        update_headscale_policy()
 
 def build_headscale_policy_from_db() -> PolicyData:
     """

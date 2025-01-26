@@ -13,7 +13,7 @@ def sync_user(username: str):
     """
     Sync user with all external services
       - Config HeadScale VPN
-      - TODO Config UserInKeyStone
+      - Config UserInKeyStone
     """
     with Session(engine) as session:
       statement = select(User).where(User.username == username)
@@ -22,6 +22,7 @@ def sync_user(username: str):
       user.last_synced = datetime.now()
       headscale.get_or_create_user(username)
       openstack.get_or_create_user(username)
+      headscale.add_user_to_group(username, "cloud-edge")
       session.add(user)
       session.commit()
       session.refresh(user)
