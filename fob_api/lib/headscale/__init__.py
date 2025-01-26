@@ -43,19 +43,19 @@ class User(BaseModel):
         server_reply = requests.post(f'{self.__path__}', headers=self.__driver__.headers, json={'name': name})
         if server_reply.status_code != 200:
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
-        return User(__driver__=self.__driver__, **server_reply.json())
+        return User(__driver__=self.__driver__, **server_reply.json()["user"])
 
     def get(self, name: str) -> 'User':
         server_reply = requests.get(f'{self.__path__}/{name}', headers=self.__driver__.headers)
         if server_reply.status_code != 200:
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
-        return User(__driver__=self.__driver__, **server_reply.json())
+        return User(__driver__=self.__driver__, **server_reply.json()["user"])
 
     def rename(self, name: str, new_name: str) -> 'User':
         server_reply = requests.post(f'{self.__path__}/{name}/rename/{new_name}', headers=self.__driver__.headers)
         if server_reply.status_code != 200:
             raise Exception(f'Error: {server_reply.status_code} - {server_reply.text}')
-        return User(__driver__=self.__driver__, **server_reply.json())
+        return User(__driver__=self.__driver__, **server_reply.json()["user"])
 
     def delete(self, name: str):
         server_reply = requests.delete(f'{self.__path__}/{name}', headers=self.__driver__.headers)

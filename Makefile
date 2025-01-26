@@ -21,8 +21,6 @@ init:
 	@echo "MAIL_SERVER=maildev" >> .env
 	@echo "MAIL_USERNAME=dev@laboinfra.net" >> .env
 	@echo "MAIL_STARTTLS=no" >> .env
-	@cat .headscale >> .env
-	@echo "" >> .env
 
 	@echo "Create keystone adminrc"
 	@echo "export OS_USERNAME=admin" > adminrc
@@ -37,10 +35,18 @@ init:
 	@cat adminrc >> .env
 	@sed -i 's/export //g' .env
 
+	@if [ -f .prod ]; then \
+		echo "Replace .env with .prod"; \
+		cp .prod .env; \
+	fi
+
 	@echo "Create Install libs for api"
 	poetry install
 	@echo "Run database migration"
 	poetry run alembic upgrade head
+
+
+admin:
 	@echo "Create default superuser"
 	poetry run python -m fob_api admin@laboinfra.net admin admin
 

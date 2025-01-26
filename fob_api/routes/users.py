@@ -58,12 +58,13 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
             expires_at=datetime.now() + timedelta(days=5)
         )
         session.add(user_reset_password)
-        
 
         try:
             mail.send_text_mail(user.email, "LaboInfra Account Created",
                 "Your LaboInfra account has been created.\n" +
-                "You can reset your password by running the following command:\n"+
+                "You can reset your password by running the following commands:\n"+
+                f"\t`pip install labctl`\n" +
+                f"\t`labctl config set --api-endpoint=https://api.laboinfra.net`\n" +
                 f"\t`labctl reset-password --username {user.username} --token {user_reset_password.token}`\n" +
                 "This token will expire in 5 days.\n" +
                 "Welcome to LaboInfra Cloud services"
@@ -76,6 +77,9 @@ def create_user(user: Annotated[User, Depends(auth.get_current_user)], user_crea
             print(f"Failed to connect to mail server, leaving user in database ({config.mail_server}:{config.mail_port})")
         
         session.commit()
+
+        task_sync_user.delay(user.username)
+
         return UserInfo(
             username=user.username,
             email=user.email,
@@ -271,7 +275,9 @@ def forgot_password(email: str):
         try:
             mail.send_text_mail(user.email, "LaboInfra Password Reset",
                 "You have requested a password reset for your LaboInfra account.\n" +
-                "You can reset your password by running the following command:\n"+
+                "You can reset your password by running the following commands:\n"+
+                f"\t`pip install labctl`\n" +
+                f"\t`labctl config set --api-endpoint=https://api.laboinfra.net`\n" +
                 f"\t`labctl reset-password --username {user.username} --token {user_reset_password.token}`\n" +
                 "This token will expire in 5 minutes.\n" +
                 "If you did not request this, please ignore this email."
