@@ -22,3 +22,7 @@ from .user import (
     UserResetPasswordResponse,
     UserMeshGroup
 )
+from .openstack import (
+    OpenStackProject,
+    OpenStackProjectCreate
+)

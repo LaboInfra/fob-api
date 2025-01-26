@@ -61,7 +61,7 @@ async def register_device_post(request: Request, mkey: str):
             context={"mkey": mkey, "error": "Invalid username or password"}
         )
 
-    headscale_tasks.create_user(username)
+    headscale_tasks.get_or_create_user(username)
 
     try:
         headscale_driver.node.register(username, mkey)
@@ -110,7 +110,7 @@ def generate_preauth_key(user: Annotated[User, Depends(auth.get_current_user)], 
     # todo add limit to max allowed devices
     if user.username != username:
         raise HTTPException(status_code=403, detail="You are not allowed to generate preauth key for other users")
-    headscale_tasks.create_user(username=username)
+    headscale_tasks.get_or_create_user(username=username)
     pre_auth_key: PreAuthKey = headscale_driver.preauthkey.create(username=username, expiration=datetime.now() + timedelta(minutes=5))
     print(pre_auth_key.__dict__)
     return DevicePreAuthKeyResponse(**pre_auth_key.__dict__)

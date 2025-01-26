@@ -13,7 +13,7 @@ from fob_api.models.database import (
     HeadScalePolicyTagOwnerMember
 )
 
-def create_user(username: str):
+def get_or_create_user(username: str):
     """
     Create User namescpaces in HeadScale Controller
 
@@ -28,7 +28,7 @@ def create_user(username: str):
         except Exception:
             print(f"User {user.email} not found in HeadScale VPN, creating...")
             headscale_driver.user.create(name=user.username)
-            return create_user(username)
+            return get_or_create_user(username)
 
 def build_headscale_policy_from_db() -> PolicyData:
     """
