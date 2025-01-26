@@ -39,7 +39,12 @@ def add_user_to_group(username: str, group_name: str):
         user_db = session.exec(select(User).where(User.username == username)).first()
         # no need to check if user exists in db, it should exist with the get or create user of headscale
         # check if user is already in group
-        if session.exec(select(HeadScalePolicyGroupMember).where(HeadScalePolicyGroupMember.name == group_name and HeadScalePolicyGroupMember.member == user_db.username)).first():
+        hspgm = session.exec(
+            select(HeadScalePolicyGroupMember)
+            .where(HeadScalePolicyGroupMember.name == group_name)
+            .where(HeadScalePolicyGroupMember.member == user_headscale.name)
+        ).first()
+        if hspgm:
             print(f"User {username} is already in group {group_name}")
             return
         print(f"Adding user {username} to group {group_name}")
