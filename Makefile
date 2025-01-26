@@ -82,3 +82,7 @@ migration:
 		exit 1; \
 	fi
 	poetry run alembic revision --autogenerate -m "$(name)"
+
+docker:
+	@echo "Build docker image"
+	@sudo docker build -t fastonboard .
