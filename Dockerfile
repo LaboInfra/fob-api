@@ -9,7 +9,8 @@ RUN apt-get update && \
 
 ## generate requirements.txt
 COPY pyproject.toml poetry.lock ./
-RUN /root/.local/bin/poetry export --format=requirements.txt --output=requirements.txt
+RUN /root/.local/bin/poetry self add poetry-plugin-export && \
+    /root/.local/bin/poetry export --format=requirements.txt --output=requirements.txt
 
 # Build the final image
 FROM python:3.12-slim-bullseye
@@ -27,16 +28,15 @@ RUN pip install -r requirements.txt && rm requirements.txt
 
 ## copy entrypoint
 COPY . .
-RUN chmod +x entrypoint.sh
-RUN rm -rfv poetry.lock pyproject.toml
+RUN chmod +x entrypoint.sh && \
+    rm -rfv poetry.lock pyproject.toml
 
 ## copy app
 WORKDIR /app/fob_api
 COPY fob_api .
 
 ## create user
-RUN useradd -m fob
-RUN chown -Rv fob:fob /app
+RUN useradd -m fob && chown -Rv fob:fob /app
 USER fob
 
 ## run
