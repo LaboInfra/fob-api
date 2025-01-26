@@ -6,5 +6,5 @@ db.sqlite3
 *.pyc
 .token
 adminrc
-.headscale
+.prod
 celerybeat-schedule.*
