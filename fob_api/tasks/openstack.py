@@ -24,3 +24,8 @@ def get_or_create_user(username: str) -> None: # todo return openstack user obje
             print(f"User {user.email} not found in OpenStack, creating...")
             openstack_client.users.create(name=user.username, password=random_password(), domain=OPENSTACK_DOMAIN_ID, enabled=True)
             return get_or_create_user(username)
+
+def set_user_password(username: str, password: str) -> None:
+    openstack_client = openstack.get_keystone_client()
+    user = get_or_create_user(username)
+    openstack_client.users.update(user=user, password=password)

@@ -24,5 +24,6 @@ from .user import (
 )
 from .openstack import (
     OpenStackProject,
-    OpenStackProjectCreate
+    OpenStackProjectCreate,
+    OpenStackUserPassword
 )

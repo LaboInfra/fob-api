@@ -6,3 +6,7 @@ class OpenStackProjectCreate(BaseModel):
 
 class OpenStackProject(OpenStackProjectCreate):
     id: int
+
+class OpenStackUserPassword(BaseModel):
+    username: str
+    password: str
