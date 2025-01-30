@@ -1,6 +1,7 @@
 volumes:
   postgres_data:
   mariadb_data:
+  headscale_data:
 
 services:
   devcontainer:
@@ -12,13 +13,24 @@ services:
     volumes:
       - ..:/workspace
       - /var/run/docker.sock:/var/run/docker.sock
- 
+
   maildev:
     image: maildev/maildev
     container_name: maildev
     ports:
       - "1080:1080"
       - "1025:1025"
+
+  headscale:
+    image: headscale/headscale:0.23
+    container_name: headscale
+    volumes:
+      - ./config:/etc/headscale
+      - headscale_data:/var/lib/headscale
+    ports:
+      - "8045:8080"
+      - "8046:9090"
+    command: serve --config /etc/headscale/headscale.yml
 
   keystone:
     image: docker.io/openstackhelm/keystone:2024.1-ubuntu_jammy
