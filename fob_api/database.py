@@ -8,4 +8,4 @@ def init_engine() -> Engine:
     :return: Engine object
     """
     print("Initializing database engine")
-    return create_engine(Config().database_url, echo=False)
+    return create_engine(Config().database_url, echo=False, pool_recycle=1800, pool_pre_ping=True)
