@@ -2,7 +2,11 @@ from fastapi import FastAPI
 
 from fob_api import engine, routes
 
-app = FastAPI()
+app = FastAPI(
+    swagger_ui_parameters={
+        "persistAuthorization": True,
+    }
+)
 
 app.include_router(routes.status_router)
 app.include_router(routes.token_router)
