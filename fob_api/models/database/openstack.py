@@ -35,7 +35,7 @@ class Project(SQLModel, table=True):
     __tablename__ = "openstack_project"
 
     id: int = Field(primary_key=True)
-    name: str = Field() # name of the project
+    name: str = Field(unique=True) # name of the project
     owner_id: int = Field(foreign_key="user.id") # user who owns this project
     created_at: datetime = Field(default=datetime.now())
 
