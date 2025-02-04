@@ -2,9 +2,6 @@ env:
 	make init
 
 init:
-	echo "test"
-
-old:
 	make clean
 	@echo "Remove old .env"
 	rm -rfv .env
@@ -38,13 +35,14 @@ old:
 	@cat adminrc >> .env
 	@sed -i 's/export //g' .env
 
-	@if [ -f .prod ]; then \
-		echo "Replace .env with .prod"; \
-		cp .prod .env; \
+	@if [ -f .prod.env ]; then \
+		echo ".prod.env found"; \
+		echo "Replacing .env with .prod"; \
+		cp -v .prod.env .env; \
 	fi
 
-	@echo "Create Install libs for api"
-	poetry install
+	@echo "Poetry install libs for api"
+	@poetry install
 	@echo "Run database migration"
 	poetry run alembic upgrade head
 

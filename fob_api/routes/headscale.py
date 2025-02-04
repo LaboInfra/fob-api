@@ -15,7 +15,7 @@ from fob_api.tasks.headscale import update_headscale_policy
 
 router = APIRouter(prefix="/headscale")
 
-@router.get("/acls/", tags=["vpn", "admin"])
+@router.get("/acls/", tags=["vpn"])
 def list(user: Annotated[User, Depends(auth.get_current_user)]) -> List[HeadScalePolicyAclAPI]:
     """
     Return list of HeadScale ACLs in Policy
@@ -32,7 +32,7 @@ def list(user: Annotated[User, Depends(auth.get_current_user)]) -> List[HeadScal
         proto=acl.proto,
     ) for acl in acls]
 
-@router.post("/acls/", tags=["vpn", "admin"])
+@router.post("/acls/", tags=["vpn"])
 def create(
     acl: HeadScalePolicyAclCreateAPI,
     user: Annotated[User, Depends(auth.get_current_user)],
@@ -62,7 +62,7 @@ def create(
             proto=new_acl.proto,
         )
 
-@router.delete("/acls/{acl_id}/", tags=["vpn", "admin"])
+@router.delete("/acls/{acl_id}/", tags=["vpn"])
 def delete(
     acl_id: int,
     user: Annotated[User, Depends(auth.get_current_user)],
@@ -96,7 +96,7 @@ def list_hosts(user: Annotated[User, Depends(auth.get_current_user)]) -> List[He
         headscale_policy_host = session.exec(select(HeadScalePolicyHost)).all()
     return headscale_policy_host
 
-@router.post("/host/", tags=["vpn", "admin"])
+@router.post("/host/", tags=["vpn"])
 def create_host(
     host: HeadScalePolicyHostCreateAPI,
     user: Annotated[User, Depends(auth.get_current_user)],
@@ -123,7 +123,7 @@ def create_host(
             raise HTTPException(status_code=400, detail=f"Failed to apply new policy: {e}")
         return new_host
 
-@router.delete("/host/{host_id}/", tags=["vpn", "admin"])
+@router.delete("/host/{host_id}/", tags=["vpn"])
 def delete_host(
     host_id: int,
     user: Annotated[User, Depends(auth.get_current_user)],

@@ -27,3 +27,9 @@ from .openstack import (
     OpenStackProjectCreate,
     OpenStackUserPassword
 )
+from .quota import (
+    AdjustUserQuota,
+    AdjustUserQuotaID,
+    AdjustProjectQuota,
+    AdjustProjectQuotaID
+)

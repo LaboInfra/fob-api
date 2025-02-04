@@ -15,7 +15,7 @@ from fob_api.tasks.openstack import set_user_password as openstack_set_user_pass
 
 router = APIRouter(prefix="/openstack")
 
-@router.get("/projects/{username}", tags=["openstack", "admin"])
+@router.get("/projects/{username}", tags=["openstack"])
 def list_openstack_project_for_user(username: str, user: Annotated[User, Depends(auth.get_current_user)]) -> List[OpenStackProjectAPI]:
     """
     Return list of OpenStack projects for a user
