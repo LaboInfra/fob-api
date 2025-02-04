@@ -153,8 +153,6 @@ def get_user_left_quota_by_type(user: db_models.User, quota_type: db_models.Quot
 
         return user_quota_own - user_quota_used
 
-# todo add a way to user to 
-
 @router.post("/adjust-project", tags=["quota"])
 def share_quota_to_project(create_quota: api_models.AdjustProjectQuota, user: Annotated[db_models.User, Depends(auth.get_current_user)]) -> List[api_models.AdjustProjectQuota]:
     """Share quota to a project"""
@@ -191,7 +189,7 @@ def share_quota_to_project(create_quota: api_models.AdjustProjectQuota, user: An
         return calculate_project_quota(project_find)
 
 # can take back quota from projects
-@router.delete("/adjust-project/{id}", tags=["quota"])
+@router.delete("/adjust-project/{id}/{username}", tags=["quota"])
 def remove_quota_attribution_for_project(id: int, username: str, user: Annotated[db_models.User, Depends(auth.get_current_user)]) -> List[api_models.AdjustProjectQuota]:
     """Remove quota attribution for a project"""
     if not user.is_admin and user.username != username:
