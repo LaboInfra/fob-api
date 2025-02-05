@@ -24,3 +24,13 @@ class UserPasswordReset(SQLModel, table=True):
     source_ip: str
     created_at: datetime = Field(default=datetime.now())
     expires_at: datetime
+
+class Token(SQLModel, table=True):
+    """
+    This class represents the Token
+    """
+    id: int = Field(primary_key=True)
+    expires_at: datetime
+    created_at: datetime
+    token_id: str
+    user_id: int = Field(foreign_key="user.id")
