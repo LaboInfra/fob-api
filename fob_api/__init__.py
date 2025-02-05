@@ -1,5 +1,5 @@
 from .config import Config
-from .database import init_engine
+from .database import init_engine, get_session
 from .lib.headscale import HeadScale
 from .vpn import headscale_driver
 from . import mail

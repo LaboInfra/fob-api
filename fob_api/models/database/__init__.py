@@ -1,6 +1,7 @@
 from .user import (
     User,
-    UserPasswordReset
+    UserPasswordReset,
+    Token
 )
 from .headscale import (
     HeadScalePolicyACL,
