@@ -15,7 +15,12 @@ from fob_api.tasks import headscale as headscale_tasks
 router = APIRouter(prefix="/devices")
 
 template = Jinja2Templates(directory="templates")
+MAX_ALLOWED_DEVICES = 5
 
+def count_devices_for_user(username: str) -> int:
+    return len(headscale_driver.node.list(username=username))
+def can_add_device(username: str) -> bool:
+    return count_devices_for_user(username) < MAX_ALLOWED_DEVICES
 @router.get("/register/{mkey}", tags=["vpn"], response_class=HTMLResponse)
 def register_device_get(request: Request, mkey: str):
     """
@@ -63,6 +68,12 @@ async def register_device_post(request: Request, mkey: str):
 
     headscale_tasks.get_or_create_user(username)
 
+    if not can_add_device(username):
+        return template.TemplateResponse(
+            request=request,
+            name="register_device.html.j2",
+            context={"mkey": mkey, "error": f"Max allowed devices reached ({MAX_ALLOWED_DEVICES})"}
+        )
     try:
         headscale_driver.node.register(username, mkey)
     except Exception as e:
@@ -111,6 +122,8 @@ def generate_preauth_key(user: Annotated[User, Depends(auth.get_current_user)], 
     if user.username != username:
         raise HTTPException(status_code=403, detail="You are not allowed to generate preauth key for other users")
     headscale_tasks.get_or_create_user(username=username)
+    if not can_add_device(username):
+        raise HTTPException(status_code=400, detail=f"Max allowed devices reached ({MAX_ALLOWED_DEVICES})")
     pre_auth_key: PreAuthKey = headscale_driver.preauthkey.create(username=username, expiration=datetime.now() + timedelta(minutes=5))
     print(pre_auth_key.__dict__)
     return DevicePreAuthKeyResponse(**pre_auth_key.__dict__)
