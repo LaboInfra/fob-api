@@ -22,7 +22,7 @@ def count_devices_for_user(username: str) -> int:
     return len(headscale_driver.node.list(username=username))
 
 def can_add_device(username: str) -> bool:
-    return count_devices_for_user(username) < MAX_ALLOWED_DEVICES
+    return count_devices_for_user(username) <= MAX_ALLOWED_DEVICES
 
 @router.get("/register/{mkey}", tags=["vpn"], response_class=HTMLResponse)
 def register_device_get(request: Request, mkey: str):
@@ -42,7 +42,6 @@ async def register_device_post(request: Request, mkey: str):
     """
     Handle device registration for headscale require basic auth
     """
-    # todo add limit to max allowed devices
     form_data = await request.form()
     username = form_data.get("username")
     password = form_data.get("password")
