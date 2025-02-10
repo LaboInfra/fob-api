@@ -9,8 +9,6 @@ from fob_api.tasks import headscale
 
 router = APIRouter()
 
-
-
 @router.get("/me", tags=["users"], response_model=Me)
 def me(user: Annotated[User, Depends(auth.get_current_user)]) -> Me:
     """
