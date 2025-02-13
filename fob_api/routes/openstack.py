@@ -6,7 +6,6 @@ from sqlmodel import Session, select
 from fob_api import auth, openstack, random_end_uid, OPENSTACK_DOMAIN_ID, OPENSTACK_ROLE_MEMBER_ID, random_password, get_session
 from fob_api.models.database import User, Project, ProjectUserMembership
 from fob_api.models.api import OpenStackProject as OpenStackProjectAPI
-from fob_api.models.api import OpenStackProjectCreate as OpenStackProjectCreateAPI
 from fob_api.models.api import OpenStackUserPassword as OpenStackUserPasswordAPI
 from fob_api.tasks.openstack import get_or_create_user as openstack_get_or_create_user
 from fob_api.tasks.openstack import set_user_password as openstack_set_user_password
@@ -25,11 +24,21 @@ def list_openstack_project_for_user(
     """
     auth.is_admin_or_self(user, username)
     user_find = session.exec(select(User).where(User.username == username)).first()
-    projects = session.exec(select(Project).where(Project.owner_id == user_find.id)).all()
-    return [OpenStackProjectAPI(
+    projects_owner = session.exec(select(Project).where(Project.owner_id == user_find.id)).all()
+    project_memberships = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.user_id == user_find.id)).all()
+    data = [OpenStackProjectAPI(
         id=project.id,
-        name=project.name
-    ) for project in projects]
+        name=project.name,
+        type="owner"
+    ) for project in projects_owner]
+    for project_membership in project_memberships:
+        local_project = session.exec(select(Project).where(Project.id == project_membership.project_id)).first()
+        data.append(OpenStackProjectAPI(
+            id=local_project.id,
+            name=local_project.name,
+            type="member"
+        ))
+    return data
 
 @router.post("/projects/{project_name}", tags=["openstack"])
 def create_openstack_project(
@@ -57,7 +66,8 @@ def create_openstack_project(
     session.refresh(new_project)
     return OpenStackProjectAPI(
         id=new_project.id,
-        name=new_project.name
+        name=new_project.name,
+        type="owner"
     )
 
 @router.delete("/projects/{project_name}", tags=["openstack"])

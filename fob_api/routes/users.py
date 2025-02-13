@@ -27,7 +27,7 @@ def get_users(
     Returns all users
     """
     auth.is_admin(user)
-    return [item for item in session.exec(select(User))] 
+    return [item for item in session.exec(select(User))]
 
 @router.post("/", response_model=UserInfo, tags=["users"])
 def create_user(
