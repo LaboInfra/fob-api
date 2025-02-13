@@ -66,3 +66,13 @@ def basic_auth_validator(username: str, password: str) -> User:
         if not user or not password_context.verify(password, user.password):
             return False
         return user
+
+def is_admin(user: User):
+    """Check if the user is an admin"""
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+def is_admin_or_self(user: User, username: str):
+    """Check if the user is an admin or the user itself"""
+    if not user.is_admin and user.username != username:
+        raise HTTPException(status_code=403, detail="Not enough permissions")

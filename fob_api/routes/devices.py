@@ -16,6 +16,14 @@ router = APIRouter(prefix="/devices")
 
 template = Jinja2Templates(directory="templates")
 
+MAX_ALLOWED_DEVICES = 5
+
+def count_devices_for_user(username: str) -> int:
+    return len(headscale_driver.node.list(username=username))
+
+def can_add_device(username: str) -> bool:
+    return count_devices_for_user(username) <= MAX_ALLOWED_DEVICES
+
 @router.get("/register/{mkey}", tags=["vpn"], response_class=HTMLResponse)
 def register_device_get(request: Request, mkey: str):
     """
@@ -34,7 +42,6 @@ async def register_device_post(request: Request, mkey: str):
     """
     Handle device registration for headscale require basic auth
     """
-    # todo add limit to max allowed devices
     form_data = await request.form()
     username = form_data.get("username")
     password = form_data.get("password")
@@ -63,6 +70,13 @@ async def register_device_post(request: Request, mkey: str):
 
     headscale_tasks.get_or_create_user(username)
 
+    if not can_add_device(username):
+        return template.TemplateResponse(
+            request=request,
+            name="register_device.html.j2",
+            context={"mkey": mkey, "error": f"Max allowed devices reached ({MAX_ALLOWED_DEVICES})"}
+        )
+
     try:
         headscale_driver.node.register(username, mkey)
     except Exception as e:
@@ -79,22 +93,27 @@ async def register_device_post(request: Request, mkey: str):
     )
 
 @router.get("/{username}", tags=["vpn"])
-def list_devices(user: Annotated[User, Depends(auth.get_current_user)], username: str):
+def list_devices(
+        username: str,
+        user: Annotated[User, Depends(auth.get_current_user)]
+    ):
     """
     List all devices
     """
-    if user.username != username and not user.is_admin:
-        raise HTTPException(status_code=403, detail="You are not an admin")
+    auth.is_admin_or_self(user, username)
     nodes = headscale_driver.node.list(username=username)
     return [ApiDeviceResponse(**node.__dict__) for node in nodes]
 
 @router.delete("/{username}/{name}", tags=["vpn"], response_model=DeviceDeleteResponse)
-def delete_device(user: Annotated[User, Depends(auth.get_current_user)], username: str, name: str):
+def delete_device(
+        username: str,
+        name: str,
+        user: Annotated[User, Depends(auth.get_current_user)]
+    ):
     """
     Delete a device
     """
-    if user.username != username and not user.is_admin:
-        raise HTTPException(status_code=403, detail="You are not an admin")
+    auth.is_admin_or_self(user, username)
     user_nodes: List[Node] = headscale_driver.node.list(username=username)
     for node in user_nodes:
         if node.givenName == name:
@@ -107,10 +126,11 @@ def generate_preauth_key(user: Annotated[User, Depends(auth.get_current_user)], 
     """
     Generate a preauth key active for 5 minutes
     """
-    # todo add limit to max allowed devices
-    if user.username != username:
-        raise HTTPException(status_code=403, detail="You are not allowed to generate preauth key for other users")
+    auth.is_admin_or_self(user, username)
     headscale_tasks.get_or_create_user(username=username)
+    
+    if not can_add_device(username):
+        raise HTTPException(status_code=400, detail=f"Max allowed devices reached ({MAX_ALLOWED_DEVICES})")
+    
     pre_auth_key: PreAuthKey = headscale_driver.preauthkey.create(username=username, expiration=datetime.now() + timedelta(minutes=5))
-    print(pre_auth_key.__dict__)
     return DevicePreAuthKeyResponse(**pre_auth_key.__dict__)

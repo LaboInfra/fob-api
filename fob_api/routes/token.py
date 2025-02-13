@@ -12,7 +12,10 @@ from fob_api.models.api import Token, TokenValidate
 router = APIRouter()
 
 @router.post("/token", response_model=Token, tags=["token"])
-def get_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: Session = Depends(get_session)) -> Token:
+def get_token(
+        form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+        session: Session = Depends(get_session)
+    ) -> Token:
     user = auth.basic_auth_validator(form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -30,7 +33,10 @@ def get_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], sessio
 
 
 @router.get("/token/refreshtoken", response_model=Token, tags=["token"])
-def refresh_token(user: Annotated[User, Depends(auth.get_current_user)], session: Session = Depends(get_session)) -> Token:
+def refresh_token(
+        user: Annotated[User, Depends(auth.get_current_user)],
+        session: Session = Depends(get_session)
+    ) -> Token:
     token_data = auth.make_token_data(user.username)
     token_db: TokenDB = TokenDB(
         expires_at=token_data["exp"],
@@ -44,7 +50,11 @@ def refresh_token(user: Annotated[User, Depends(auth.get_current_user)], session
     return Token(access_token=token, token_type="bearer")
 
 @router.delete("/token/{jti}", tags=["token"])
-def revoke_token(jti: str, user: Annotated[User, Depends(auth.get_current_user)], session: Session = Depends(get_session)) -> None:
+def revoke_token(
+        jti: str,
+        user: Annotated[User, Depends(auth.get_current_user)],
+        session: Session = Depends(get_session)
+    ) -> None:
     token = session.exec(select(TokenDB).where(TokenDB.token_id == jti)).first()
     if not token or token.user_id != user.id:
         raise HTTPException(status_code=404, detail="Cant revoke token")
