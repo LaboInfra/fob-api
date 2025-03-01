@@ -35,6 +35,10 @@ celery.conf.update(
             'task': 'fastonboard.headscale.sync_policy',
             'schedule': 60 * 15  # every 15min
         },
+        'fastonboard.token.purge_expired': {
+            'task': 'fastonboard.token.purge_expired',
+            'schedule': 60 * 60 * 24 # every day
+        }
     }
 )
 # import need to be after celery is defined to avoid circular import

@@ -55,13 +55,13 @@ serv:
 	poetry run python -m uvicorn fob_api.main:app --reload
 
 worker:
-	celery -A fob_api.worker worker --loglevel=info
+	poetry run celery -A fob_api.worker worker --loglevel=info
 
 beat:
-	celery -A fob_api.worker beat --loglevel=info
+	poetry run celery -A fob_api.worker beat --loglevel=info
 
 flower:
-	celery -A fob_api.worker flower
+	poetry run celery -A fob_api.worker flower
 
 keystone:
 	sudo docker exec -it keystone /var/lib/openstack/bin/keystone-wsgi-public
