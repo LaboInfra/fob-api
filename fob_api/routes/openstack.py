@@ -14,19 +14,6 @@ from fob_api.models.api import OpenStackUserPassword as OpenStackUserPasswordAPI
 from fob_api.tasks.openstack import get_or_create_user as openstack_get_or_create_user
 from fob_api.tasks.openstack import set_user_password as openstack_set_user_password
 from fob_api.tasks import openstack as openstack_tasks
-# User actions
-# all
-# - list projects
-# - create project
-# - reset self openstack password
-# - give quota to project
-# project admin
-# - delete project
-# - add user to project
-# - remove user from project
-# project member
-# - leave project
-
 
 router = APIRouter(prefix="/openstack")
 
@@ -207,8 +194,22 @@ def remove_user_from_project(
     """
     # check if owner of the project or is admin
     db_project = session.exec(select(Project).where(Project.name == project_name)).first()
-    if db_project.owner_id != user.id and not user.is_admin:
+    db_project_members_name = [
+        session.exec(select(User).where(User.id == member.user_id)).first().username
+        for member in session.exec(select(ProjectUserMembership).where(ProjectUserMembership.project_id == db_project.id)).all()
+    ]
+
+    # action allowed if anyone of the following is true
+    # 1. user is admin
+    # 2. user is owner of the project and wants to remove other user
+    # 3. user is not owner of the project and wants to remove himself from project
+
+    if db_project.owner_id != user.id and not user.is_admin and user.username not in db_project_members_name:
         raise HTTPException(status_code=403, detail="Not allowed to remove user from this project")
+    
+    if user.username in db_project_members_name:
+        # this avoids the case where user is not owner of the project and wants to remove other user
+        username = user.username
     
     # reject if user is owner of the project
     if user.username == username and db_project.owner_id == user.id:
