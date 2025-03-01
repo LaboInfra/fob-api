@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from fob_api import engine, openstack, random_end_uid, random_password, OPENSTACK_DOMAIN_ID
 from fob_api.models.database import User
 
-def get_or_create_user(username: str) -> None: # todo return openstack user object
+def get_or_create_user(username: str): # todo return openstack user object
     """
     Create OpenStack User if not exists
 
@@ -11,7 +11,7 @@ def get_or_create_user(username: str) -> None: # todo return openstack user obje
         username (str): User name
 
     Returns:
-        None
+        openstack user object
     """
     with Session(engine) as session:
         user = session.exec(select(User).where(User.username == username)).first()

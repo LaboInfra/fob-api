@@ -4,14 +4,31 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from fob_api import auth, openstack, random_end_uid, OPENSTACK_DOMAIN_ID, OPENSTACK_ROLE_MEMBER_ID, random_password, get_session
-from fob_api.models.database import User, Project, ProjectUserMembership
-from fob_api.models.api import OpenStackProject as OpenStackProjectAPI
-from fob_api.models.api import OpenStackUserPassword as OpenStackUserPasswordAPI
+from fob_api.models.database import User, Project, ProjectUserMembership # deprecated import for models
+from fob_api.models import database as db_models
+from fob_api.models import api as api_models
+from fob_api.models.api import OpenStackProject as OpenStackProjectAPI # deprecated import for models
+from fob_api.models.api import OpenStackUserPassword as OpenStackUserPasswordAPI # deprecated import for models
 from fob_api.tasks.openstack import get_or_create_user as openstack_get_or_create_user
 from fob_api.tasks.openstack import set_user_password as openstack_set_user_password
 
+# User actions
+# all
+# - list projects
+# - create project
+# - reset self openstack password
+# - give quota to project
+# project admin
+# - delete project
+# - add user to project
+# - remove user from project
+# project member
+# - leave project
+
 
 router = APIRouter(prefix="/openstack")
+
+MAX_PROJECTS_USER_OWN = 3
 
 @router.get("/projects/{username}", tags=["openstack"])
 def list_openstack_project_for_user(
@@ -25,12 +42,14 @@ def list_openstack_project_for_user(
     auth.is_admin_or_self(user, username)
     user_find = session.exec(select(User).where(User.username == username)).first()
     projects_owner = session.exec(select(Project).where(Project.owner_id == user_find.id)).all()
-    project_memberships = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.user_id == user_find.id)).all()
+    # get all owner projects
     data = [OpenStackProjectAPI(
         id=project.id,
         name=project.name,
         type="owner"
     ) for project in projects_owner]
+    # get all member projects and add to data
+    project_memberships = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.user_id == user_find.id)).all()
     for project_membership in project_memberships:
         local_project = session.exec(select(Project).where(Project.id == project_membership.project_id)).first()
         data.append(OpenStackProjectAPI(
@@ -45,15 +64,15 @@ def create_openstack_project(
         project_name: str,
         user: Annotated[User, Depends(auth.get_current_user)],
         session: Session = Depends(get_session)
-    ) -> OpenStackProjectAPI | None:
+    ) -> api_models.OpenStackProject | None:
     """
     Create a new OpenStack project
     """
     openstack_client = openstack.get_keystone_client()
     
     projects = session.exec(select(Project).where(Project.owner_id == user.id)).all()
-    if len(projects) >= 3:
-        raise HTTPException(status_code=400, detail="You cannot create more than 3 projects")
+    if len(projects) >= MAX_PROJECTS_USER_OWN:
+        raise HTTPException(status_code=400, detail=f"You cannot create more than {str(MAX_PROJECTS_USER_OWN)} projects")
     project_name = project_name + "-" + random_end_uid()
     new_project = Project(name=project_name, owner_id=user.id)
     session.add(new_project)
@@ -85,6 +104,20 @@ def delete_openstack_project(
         raise HTTPException(status_code=404, detail="Project not found")
     if project.owner_id != user.id and not user.is_admin:
         raise HTTPException(status_code=403, detail="Not allowed to delete this project")
+    
+    # check if quota is given to project
+    # here we are checking if project has any quotas assigned to it so nothing is left behind not assigned to any project
+    project_quotas = session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.project_id == project.id)).all()
+    for project_quota in project_quotas:
+        if project_quota.quantity > 0:
+            print(project_quota.quantity)
+            raise HTTPException(status_code=400, detail="Cannot delete project with quotas assigned to it please remove all quotas assigned to project")
+
+    # check if project has members
+    project_memberships = session.exec(select(db_models.ProjectUserMembership).where(db_models.ProjectUserMembership.project_id == project.id)).all()
+    if project_memberships:
+        raise HTTPException(status_code=400, detail="Cannot delete project with members please remove all members from project")
+
     openstack_project = openstack_client.projects.find(name=project_name)
     openstack_client.projects.delete(openstack_project.id)
     session.delete(project)
