@@ -6,7 +6,9 @@ class OpenStackProjectCreate(BaseModel):
 
 class OpenStackProject(OpenStackProjectCreate):
     id: int
-    type: str
+    name: str
+    owner: str
+    members: List[str]
 
 class OpenStackUserPassword(BaseModel):
     username: str
