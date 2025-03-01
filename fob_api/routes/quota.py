@@ -3,6 +3,9 @@ from typing import List, Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from novaclient import exceptions as nova_exceptions
+from cinderclient import exceptions as cinder_exceptions
+
 from fob_api import auth, engine, openstack, get_session
 from fob_api.models import database as db_models
 from fob_api.models import api as api_models
@@ -158,70 +161,72 @@ def show_user_adjustements(
         comment=q.comment
     ) for q in session.exec(select(db_models.UserQuota).where(db_models.UserQuota.user_id == user_find.id)).all()]
 
-@router.post("/adjust-project", tags=["quota"])
-def share_quota_to_project(
+@router.put("/adjust-project", tags=["quota"])
+def set_quota_to_project(
         create_quota: api_models.AdjustProjectQuota,
         user: Annotated[db_models.User, Depends(auth.get_current_user)],
         session: Session = Depends(get_session)
     ) -> List[api_models.AdjustProjectQuota]:
-    """Share quota to a project"""
+    """Set quota to a project"""
     auth.is_admin_or_self(user, create_quota.username)
-
-    user_find = session.exec(select(db_models.User).where(db_models.User.username == create_quota.username)).first()
-    if not user_find:
-        raise HTTPException(status_code=400, detail="User not found")
     project_find = session.exec(select(db_models.Project).where(db_models.Project.name == create_quota.project_name)).first()
     if not project_find:
-        raise HTTPException(status_code=400, detail="Project not found")
-    project_membership = session.exec(select(db_models.ProjectUserMembership).where(db_models.ProjectUserMembership.project_id == project_find.id, db_models.ProjectUserMembership.user_id == user_find.id)).first()
+        raise HTTPException(status_code=404, detail="Project not found")
+    user_find = session.exec(select(db_models.User).where(db_models.User.username == create_quota.username)).first()
+    if not user_find:
+        raise HTTPException(status_code=404, detail="User not found")
+    if create_quota.quantity < 0:
+        raise HTTPException(status_code=400, detail="Quantity cannot be less than 1 if you want to remove quota use the delete endpoint")
+
+    # check if user is member of the project
+    project_membership = session.exec(
+        select(db_models.ProjectUserMembership)
+        .where(
+            db_models.ProjectUserMembership.project_id == project_find.id,
+            db_models.ProjectUserMembership.user_id == user_find.id)
+    ).first()
     if not project_membership and project_find.owner_id != user_find.id:
         raise HTTPException(status_code=400, detail="User not in project")
-    if create_quota.quantity < 1:
-        raise HTTPException(status_code=400, detail="Quantity cannot be less than 1 if you want to remove quota use the delete endpoint")
-    
+
+    # check if user has enough quota to share
     if get_user_left_quota_by_type(user_find, db_models.QuotaType.from_str(create_quota.type)) < create_quota.quantity:
         raise HTTPException(status_code=400, detail="User do not have enough quota to share")
-
-    new_quota = db_models.UserQuotaShare(
-        user_id=user_find.id,
-        project_id=project_find.id,
-        comment=create_quota.comment,
-        quantity=create_quota.quantity,
-        type=create_quota.type
-    )
-
-    session.add(new_quota)
-    session.commit()
     
-    sync_project_quota(project_find)
-    return calculate_project_quota(project_find)
-
-# can take back quota from projects
-@router.delete("/adjust-project/{id}/{username}", tags=["quota"])
-def remove_quota_attribution_for_project(
-        id: int,
-        username: str,
-        user: Annotated[db_models.User, Depends(auth.get_current_user)],
-        session: Session = Depends(get_session)
-    ) -> List[api_models.AdjustProjectQuota]:
-    """Remove quota attribution for a project"""
-    auth.is_admin_or_self(user, username)
-    quota = session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.id == id).where(db_models.UserQuotaShare.user_id == user.id)).first()
-    if not quota:
-        raise HTTPException(status_code=400, detail="Project adjustement not found")
-    project = session.exec(select(db_models.Project).where(db_models.Project.id == quota.project_id)).first()
-    session.delete(quota)
+    # check if user has already shared quota
+    quota = session.exec(
+        select(db_models.UserQuotaShare)
+        .where(
+            db_models.UserQuotaShare.user_id == user_find.id,
+            db_models.UserQuotaShare.project_id == project_find.id,
+            db_models.UserQuotaShare.type == create_quota.type
+        )
+    ).first()
+    previous_quantity = 0
+    if quota:
+        previous_quantity = quota.quantity
+        quota.quantity = create_quota.quantity
+        quota.comment = create_quota.comment
+    else:
+        quota = db_models.UserQuotaShare(
+            user_id=user_find.id,
+            project_id=project_find.id,
+            comment=create_quota.comment,
+            quantity=create_quota.quantity,
+            type=create_quota.type
+        )
+        session.add(quota)
     session.commit()
     try:
-        sync_project_quota(project)
-    except Exception as e:
-        print(e)
-        # this is when quota try to be removed but project use the quota
-        # todo if needed to rebuild quota object
-        session.add(quota)
+        sync_project_quota(project_find)
+    except (nova_exceptions.ClientException, cinder_exceptions.ClientException) as e:
+        session.refresh(quota)
+        quota.quantity = previous_quantity
         session.commit()
-        sync_project_quota(project)
-    return calculate_project_quota(project)
+        raise HTTPException(status_code=400, detail="Error while setting quota you may use the quota that is already used")
+        # this append when quota is set but project already use the quota so we need to rollback
+
+    return calculate_project_quota(project_find)
+
 
 @router.get("/project/{project_name}/total", tags=["quota"])
 def show_project_quota(
