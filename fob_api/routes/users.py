@@ -54,24 +54,22 @@ def create_user(
     session.commit()
     session.refresh(new_user)
 
+    TIME_DAY_DELTA = 5
+
     user_reset_password = UserPasswordReset(
         user_id=new_user.id,
         token=str(uuid4()),
         source_ip="",
-        expires_at=datetime.now() + timedelta(days=5)
+        expires_at=datetime.now() + timedelta(days=TIME_DAY_DELTA)
     )
     session.add(user_reset_password)
 
     try:
-        mail.send_text_mail(new_user.email, "LaboInfra Account Created",
-            "Your LaboInfra account has been created.\n" +
-            "You can reset your password by running the following commands:\n"+
-            f"\t`pip install labctl`\n" +
-            f"\t`labctl config set --api-endpoint=https://api.laboinfra.net`\n" +
-            f"\t`labctl reset-password --username {new_user.username} --token {user_reset_password.token}`\n" +
-            "This token will expire in 5 days.\n" +
-            "Welcome to LaboInfra Cloud services"
-        )
+        mail.send_mail(new_user.email, 'Your LaboInfra account has been created.', 'account_created.html.j2', {
+            "username": new_user.username,
+            "token": user_reset_password.token,
+            "expire_days": TIME_DAY_DELTA
+        })
     except mail.SMTPRecipientsRefused:
         print("Failed to send email, deleting user")
         session.delete(new_user)
