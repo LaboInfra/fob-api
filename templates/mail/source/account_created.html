@@ -1,0 +1,32 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <style>
+       /* Add custom classes and styles that you want inlined here */
+    </style>
+  </head>
+  <body class="bg-light">
+    <div class="container">
+      <div class="card my-10">
+        <div class="card-body">
+          <h1 class="h3 mb-2">LaboInfra - Account created</h1>
+          <h5 class="text-teal-700">Here's the token to reset your account password</h5>
+          <preview>LaboInfra - Account created</preview>
+          <hr>
+          <div class="space-y-3">
+            <p class="text-gray-700">Wellcome {{ username }}</p>
+            <p class="text-gray-700">Your LaboInfra account has been created.</p>
+            <code class="text-gray-700">{{ token }}</code>
+            <p class="text-gray-700">This token will expire in {{ expire_time }}.</p>
+            <p class="text-gray-700">
+              Check out the <a href="https://docs.laboinfra.net/cloud/getting-started/" target="_blank">Documentation getting started</a> to setup your account.
+            </p>
+          </div>
+          <hr>
+          <p class="text-gray-700">If you have any questions, please don't hesitate to contact us at <a href="mailto:{{ support_email }}">{{ support_email }}</a> or create a ticket on our <a href="https://docs.laboinfra.net/join/">Discord</a></p>
+          <p class="text-gray-700">Thank you for using LaboInfra!</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
