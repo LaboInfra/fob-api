@@ -43,19 +43,32 @@ def list_openstack_project_for_user(
     user_find = session.exec(select(User).where(User.username == username)).first()
     projects_owner = session.exec(select(Project).where(Project.owner_id == user_find.id)).all()
     # get all owner projects
-    data = [OpenStackProjectAPI(
-        id=project.id,
-        name=project.name,
-        type="owner"
-    ) for project in projects_owner]
+    data = []
+    for project in projects_owner:
+        db_members = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.project_id == project.id)).all()
+        data.append(OpenStackProjectAPI(
+            id=project.id,
+            name=project.name,
+            owner=username,
+            members=[
+                session.exec(select(User).where(User.id == member.user_id)).first().username
+                for member in db_members
+            ]
+        ))
     # get all member projects and add to data
     project_memberships = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.user_id == user_find.id)).all()
     for project_membership in project_memberships:
         local_project = session.exec(select(Project).where(Project.id == project_membership.project_id)).first()
+        db_members = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.project_id == local_project.id)).all()
+        owner = session.exec(select(User).where(User.id == local_project.owner_id)).first()
         data.append(OpenStackProjectAPI(
             id=local_project.id,
             name=local_project.name,
-            type="member"
+            owner=owner.username,
+            members=[
+                session.exec(select(User).where(User.id == member.user_id)).first().username
+                for member in db_members
+            ]
         ))
     return data
 
