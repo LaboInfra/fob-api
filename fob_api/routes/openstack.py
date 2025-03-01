@@ -148,19 +148,21 @@ def add_user_to_project(
         session: Session = Depends(get_session)
     ) -> None:
     """
-    Add user to project if user is owner of the project
+    Add user to project
     """
     db_project = session.exec(select(Project).where(Project.name == project_name)).first()
+    # check if owner of the project or is admin
     if db_project.owner_id != user.id and not user.is_admin:
         raise HTTPException(status_code=403, detail="Not allowed to add user to this project")
-    
+
+    # reject if user is owner of the project
+    if user.username == username:
+        raise HTTPException(status_code=400, detail="Cannot add owner to project (owner is already in project)")
+
+    # get user to add
     user_to_add = session.exec(select(User).where(User.username == username)).first()
     if not user_to_add or not db_project:
-        raise HTTPException(status_code=404, detail="User or project not found")
-
-    # if user is owner of the project
-    if user_to_add.id == db_project.owner_id:
-        raise HTTPException(status_code=400, detail="User is owner of the project do not need to be added")
+        raise HTTPException(status_code=404, detail="User to add not found")
     
     # check if user is already in project
     assignment = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.project_id == db_project.id, ProjectUserMembership.user_id == user_to_add.id)).first()
