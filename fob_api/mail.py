@@ -11,7 +11,7 @@ config = Config()
 # Ignore SSL certificate errors
 context = _create_unverified_context()
 
-jinja_engine = Environment(loader=FileSystemLoader('templates/mail'))
+jinja_engine = Environment(loader=FileSystemLoader('templates/mail'), autoescape=True)
 
 template_data_base = {
     "site_url": "https://docs.laboinfra.net",
