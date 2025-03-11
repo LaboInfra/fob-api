@@ -66,7 +66,7 @@ def create_openstack_project(
         project_name: str,
         user: Annotated[User, Depends(auth.get_current_user)],
         session: Session = Depends(get_session)
-    ) -> api_models.OpenStackProject | None:
+    ) -> api_models.OpenStackProjectCreate | None:
     """
     Create a new OpenStack project
     """
@@ -85,11 +85,7 @@ def create_openstack_project(
 
     session.commit()
     session.refresh(new_project)
-    return OpenStackProjectAPI(
-        id=new_project.id,
-        name=new_project.name,
-        type="owner"
-    )
+    return api_models.OpenStackProjectCreate(name=new_project.name)
 
 @router.delete("/projects/{project_name}", tags=["openstack"])
 def delete_openstack_project(
