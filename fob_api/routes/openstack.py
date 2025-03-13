@@ -242,7 +242,7 @@ def remove_user_from_project(
     # try to sync quotas with openstack without user quotas if it fails rollback quotas
     try:
         openstack_tasks.sync_project_quota(os_project)
-    except (nova_exceptions.ClientException, cinder_exceptions.ClientException) as e:
+    except (nova_exceptions.ClientException, cinder_exceptions.ClientException):
         # rollback quotas when quota sync fails (when quota is lower than current usage)
         for project_quota in project_quotas:
             session.refresh(project_quota)

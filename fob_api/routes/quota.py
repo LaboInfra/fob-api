@@ -36,7 +36,7 @@ def calculate_user_quota(user: db_models.User) -> List[api_models.AdjustUserQuot
         user_max_quota_dict = {k: 0 for k in db_models.QuotaType}
         for q in session.exec(select(db_models.UserQuota).where(db_models.UserQuota.user_id == user.id)).all():
             user_max_quota_dict[db_models.QuotaType.from_str(q.type)] += q.quantity
-        
+
         return [api_models.AdjustUserQuota(
             username=user.username,
             type=k,
@@ -49,7 +49,7 @@ def calculate_project_quota(project: db_models.Project) -> List[api_models.Adjus
         project_max_quota_dict = {k: 0 for k in db_models.QuotaType}
         for q in session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.project_id == project.id)).all():
             project_max_quota_dict[db_models.QuotaType.from_str(q.type)] += q.quantity
-        
+
         return [api_models.AdjustProjectQuota(
             username="",
             project_name=project.name,
@@ -82,7 +82,7 @@ def get_user_left_quota_by_type(user: db_models.User, quota_type: db_models.Quot
         user_quota_own = 0
         for q in session.exec(select(db_models.UserQuota).where(db_models.UserQuota.user_id == user.id).where(db_models.UserQuota.type == quota_type)).all():
             user_quota_own += q.quantity
-        
+
         user_quota_used = 0
         for q in session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.user_id == user.id).where(db_models.UserQuotaShare.type == quota_type)).all():
             user_quota_used += q.quantity
@@ -188,11 +188,6 @@ def set_quota_to_project(
     if not project_membership and project_find.owner_id != user_find.id:
         raise HTTPException(status_code=400, detail="User not in project")
 
-    # check if user has enough quota to share
-    if get_user_left_quota_by_type(user_find, db_models.QuotaType.from_str(create_quota.type)) < create_quota.quantity:
-        raise HTTPException(status_code=400, detail="User do not have enough quota to share")
-    
-    # check if user has already shared quota
     quota = session.exec(
         select(db_models.UserQuotaShare)
         .where(
@@ -202,6 +197,14 @@ def set_quota_to_project(
         )
     ).first()
     previous_quantity = 0
+    if quota:
+        previous_quantity = quota.quantity
+
+    # check if user has enough quota to share
+    if get_user_left_quota_by_type(user_find, db_models.QuotaType.from_str(create_quota.type)) + previous_quantity < create_quota.quantity:
+        raise HTTPException(status_code=400, detail="User do not have enough quota to share")
+
+    # check if user has already shared quota
     if quota:
         previous_quantity = quota.quantity
         quota.quantity = create_quota.quantity
@@ -215,10 +218,12 @@ def set_quota_to_project(
             type=create_quota.type
         )
         session.add(quota)
+    if create_quota.quantity == 0:
+        session.delete(quota)
     session.commit()
     try:
         sync_project_quota(project_find)
-    except (nova_exceptions.ClientException, cinder_exceptions.ClientException) as e:
+    except (nova_exceptions.ClientException, cinder_exceptions.ClientException):
         session.refresh(quota)
         quota.quantity = previous_quantity
         session.commit()
@@ -254,7 +259,7 @@ def show_project_adjustements(
         raise HTTPException(status_code=400, detail="Project not found")
     if not user.is_admin and not session.exec(select(db_models.ProjectUserMembership).where(db_models.ProjectUserMembership.project_id == project_find.id, db_models.ProjectUserMembership.user_id == user.id)).first() and project_find.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not allowed to see Adjustements for this project")
-    
+
     shared_quotas = []
     for q in session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.project_id == project_find.id)).all():
         user = session.exec(select(db_models.User).where(db_models.User.id == q.user_id)).first()
