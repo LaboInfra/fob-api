@@ -6,14 +6,13 @@ def parse_bool(value: str) -> bool:
     :param value: The value to parse
     :return: The boolean value or None if the value is not recognized
     """
-    if not value:
-        return None
     list_of_true = ["true", "yes", "1"]
     list_of_false = ["false", "no", "0"]
     if value.lower() in list_of_true:
         return True
     if value.lower() in list_of_false:
         return False
+    raise ValueError(f"Value {value} is not recognized as a boolean use one of {list_of_true + list_of_false}")
 
 class SingletonMeta(type):
 
