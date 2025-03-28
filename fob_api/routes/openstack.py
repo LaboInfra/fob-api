@@ -1,3 +1,4 @@
+import re
 from typing import List, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -71,6 +72,9 @@ def create_openstack_project(
     Create a new OpenStack project
     """
     openstack_client = openstack.get_keystone_client()
+
+    if not re.match(r"^[a-zA-Z0-9_-]+$", project_name):
+        raise HTTPException(status_code=400, detail="Invalid project name")
     
     projects = session.exec(select(Project).where(Project.owner_id == user.id)).all()
     if len(projects) >= MAX_PROJECTS_USER_OWN:
