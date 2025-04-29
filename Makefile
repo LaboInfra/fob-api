@@ -2,7 +2,6 @@ env:
 	make init
 
 init:
-	make clean
 	@echo "Remove old .env"
 	rm -rfv .env
 

@@ -16,3 +16,5 @@ adminrc
 README.md
 .headscale
 .sass-cache/
+.coverage
+.vscode/
