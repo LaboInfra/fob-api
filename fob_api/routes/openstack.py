@@ -12,12 +12,11 @@ from fob_api.models import database as db_models
 from fob_api.models import api as api_models
 from fob_api.models.api import OpenStackProject as OpenStackProjectAPI # deprecated import for models
 from fob_api.models.api import OpenStackUserPassword as OpenStackUserPasswordAPI # deprecated import for models
-from fob_api.tasks.openstack import get_or_create_user as openstack_get_or_create_user
-from fob_api.tasks.openstack import set_user_password as openstack_set_user_password
-from fob_api.tasks import openstack as openstack_tasks
+from fob_api.managers import OpenStackManager, UserManager
 
 router = APIRouter(prefix="/openstack")
 
+# TODO migrate to config
 MAX_PROJECTS_USER_OWN = 3
 
 @router.get("/projects/{username}", tags=["openstack"])
@@ -83,8 +82,10 @@ def create_openstack_project(
     new_project = Project(name=project_name, owner_id=user.id)
     session.add(new_project)
 
+    os_manager = OpenStackManager(session)
+
     os_project = openstack_client.projects.create(name=new_project.name, domain=OPENSTACK_DOMAIN_ID, enabled=True)
-    os_user = openstack_get_or_create_user(user.username)
+    os_user = os_manager.get_or_create_user(user.username)
     openstack_client.roles.grant(role=OPENSTACK_ROLE_MEMBER_ID, user=os_user.id, project=os_project.id)
 
     session.commit()
@@ -135,11 +136,11 @@ def reset_openstack_user_password(
     Reset OpenStack user password
     """
     auth.is_admin_or_self(user, username)
-    user_find = session.exec(select(User).where(User.username == username)).first()
+    user_find = UserManager(session).get_user(username)
     if not user_find:
         raise HTTPException(status_code=404, detail="User not found")
     rand_password = random_password()
-    openstack_set_user_password(username, rand_password)
+    OpenStackManager().set_user_password(username, rand_password)
     return OpenStackUserPasswordAPI(username=username, password=rand_password)
 
 @router.put("/projects/{project_name}/users/{username}", tags=["openstack"])
@@ -152,9 +153,10 @@ def add_user_to_project(
     """
     Add user to project
     """
-    db_project = session.exec(select(Project).where(Project.name == project_name)).first()
+    openstack_manager = OpenStackManager(session)
+    db_project = openstack_manager.get_project(project_name)
     # check if owner of the project or is admin
-    if db_project.owner_id != user.id and not user.is_admin:
+    if not db_project or db_project.owner_id != user.id and not user.is_admin:
         raise HTTPException(status_code=403, detail="Not allowed to add user to this project")
 
     # reject if user is owner of the project
@@ -162,25 +164,16 @@ def add_user_to_project(
         raise HTTPException(status_code=400, detail="Cannot add owner to project (owner is already in project)")
 
     # get user to add
-    user_to_add = session.exec(select(User).where(User.username == username)).first()
-    if not user_to_add or not db_project:
+    user_to_add = UserManager(session).get_user(username)
+    if not user_to_add:
         raise HTTPException(status_code=404, detail="User to add not found")
     
     # check if user is already in project
-    assignment = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.project_id == db_project.id, ProjectUserMembership.user_id == user_to_add.id)).first()
-    if assignment:
+    if openstack_manager.is_user_member_of_project(db_project, user_to_add):
         raise HTTPException(status_code=400, detail="User already in project")
     
-    new_assignment = ProjectUserMembership(project_id=db_project.id, user_id=user_to_add.id)
-    session.add(new_assignment)
-    openstack_client = openstack.get_keystone_client()
-    try:
-        os_project = openstack_client.projects.find(name=project_name)
-    except Exception:
-        raise HTTPException(status_code=500, detail="OpenStack error cant get project")
-    os_user = openstack_get_or_create_user(username)
-    openstack_client.roles.grant(role=OPENSTACK_ROLE_MEMBER_ID, user=os_user.id, project=os_project.id)
-    session.commit()
+    openstack_manager.add_user_to_project(user_to_add, db_project)
+
 
 @router.delete("/projects/{project_name}/users/{username}", tags=["openstack"])
 def remove_user_from_project(
@@ -256,7 +249,7 @@ def remove_user_from_project(
         raise HTTPException(status_code=400, detail="Cannot remove user from project, user share used quotas with project")
     
     # remove user from project
-    os_user = openstack_get_or_create_user(username)
+    os_user = OpenStackManager(session).get_or_create_user(user_to_remove.username)
     openstack_client.roles.revoke(role=OPENSTACK_ROLE_MEMBER_ID, user=os_user.id, project=os_project.id)
     session.delete(assignment)
     session.commit()

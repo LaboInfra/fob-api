@@ -1,4 +1,5 @@
 """
+# THIS CODE IS DEPRECATED USER OPENSTACKMANAGER INSTEAD
 This module is used to authenticate with OpenStack and create a client object.
 """
 
