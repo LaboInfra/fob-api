@@ -1,34 +1,25 @@
-import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
 
-from fob_api import get_session
-from fob_api.main import app
+from fob_api.models import database as db
+from fob_api.tests.conftest import DEFAULT_PASSWORD
 
-
-@pytest.fixture(name="session")
-def session_fixture():
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+def test_get_token(client: TestClient, client_admin: db.User):
+    username = client_admin.username
+    correct_password = DEFAULT_PASSWORD
+    response = client.post(
+        "/token",
+        data={"username": username, "password": correct_password},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert "token_type" in data
+    assert data["token_type"] == "bearer"
 
-
-@pytest.fixture(name="client")
 def client_fixture(session: Session):
     def get_session_override():
         return session
-
-    app.dependency_overrides[get_session] = get_session_override
-    client = TestClient(app)
-    yield client
-    app.dependency_overrides.clear()
-
-
-def test_create(client: TestClient):
     response = client.post(
         "/test/", json={"name": "Deadpond", "secret_name": "Dive Wilson"}
     )
@@ -36,6 +27,3 @@ def test_create(client: TestClient):
 
     #assert response.status_code == 200
     #assert data["name"] == "Deadpond"
-    #assert data["secret_name"] == "Dive Wilson"
-    #assert data["age"] is None
-    #assert data["id"] is not None

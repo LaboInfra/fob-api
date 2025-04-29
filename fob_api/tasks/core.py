@@ -5,8 +5,9 @@ from fob_api import engine
 
 from fob_api.models.database import User, Token
 from fob_api.worker import celery
-from fob_api.tasks import headscale, openstack
+from fob_api.tasks import headscale
 from fob_api.models.api import SyncInfo
+from fob_api.managers import OpenStackManager
 
 @celery.task()
 def sync_user(username: str):
@@ -21,7 +22,7 @@ def sync_user(username: str):
       user = results.one()
       user.last_synced = datetime.now()
       headscale.get_or_create_user(username)
-      openstack.get_or_create_user(username)
+      OpenStackManager.get_keystone_client(username)
       headscale.add_user_to_group(username, "cloud-edge")
       session.add(user)
       session.commit()
