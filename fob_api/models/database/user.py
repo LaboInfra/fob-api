@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
 
 
 class User(SQLModel, table=True):
@@ -13,6 +13,7 @@ class User(SQLModel, table=True):
     is_admin: bool = False
     disabled: bool = False
     last_synced: datetime = Field(default=datetime.now())
+    tokens: list["Token"] = Relationship(back_populates="user", cascade_delete=True)
 
 class UserPasswordReset(SQLModel, table=True):
     """
@@ -34,3 +35,4 @@ class Token(SQLModel, table=True):
     created_at: datetime
     token_id: str
     user_id: int = Field(foreign_key="user.id")
+    user: "User" = Relationship(back_populates="tokens")
