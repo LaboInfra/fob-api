@@ -101,3 +101,19 @@ def update_headscale_policy() -> tuple:
         return old_pldt_str, new_pldt_str
     print("HeadScale Policy data is up to date")
     return None, None
+
+def pruge_vpn_user(username: str):
+    """
+    Purge a VPN user from the system.
+    """
+    user = headscale_driver.user.get(username)
+    if not user:
+        print(f"User {username} not found.")
+        return
+
+    for node in headscale_driver.node.list(user.name):
+        headscale_driver.node.delete(node.id)
+        print(f"Node {node.id} for user {username} deleted.")
+
+    headscale_driver.user.delete(user.name)
+    print(f"User {username} purged successfully.")

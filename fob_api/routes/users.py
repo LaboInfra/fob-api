@@ -15,6 +15,7 @@ from fob_api.models.database import HeadScalePolicyGroupMember
 from fob_api.tasks.core import sync_user as task_sync_user
 from fob_api.auth import hash_password
 from fob_api.worker import celery
+from fob_api.managers import UserManager
 
 router = APIRouter(prefix="/users")
 
@@ -27,7 +28,7 @@ def get_users(
     Returns all users
     """
     auth.is_admin(user)
-    return [item for item in session.exec(select(User))]
+    return UserManager(session).list_users()
 
 @router.post("/", response_model=UserInfo, tags=["users"])
 def create_user(
@@ -38,6 +39,7 @@ def create_user(
     """
     Create a new user
     """
+    # todo migrate this code to user manager
     auth.is_admin(user)
     # Check if user already exists
     user_exists = session.exec(select(User).where(User.email == user_create.email)).first()
@@ -98,7 +100,7 @@ def get_user(
     Get user by username
     """
     auth.is_admin(user)
-    user = session.exec(select(User).where(User.username == username)).first()
+    user = UserManager(session).get_user_by_name(username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -112,13 +114,9 @@ def delete_user(
     """
     Delete user by username
     """
+    # todo migrate this code to user manager
     auth.is_admin(user)
-    user = session.exec(select(User).where(User.username == username)).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    session.delete(user)
-    session.commit()
-    return user
+    raise NotImplementedError("Delete user is not implemented yet.")
 
 @router.get("/{username}/sync", response_model=TaskInfo, tags=["users"])
 def sync_user(
@@ -156,39 +154,15 @@ def reset_password(
         session: Session = Depends(get_session)
     ) -> UserResetPasswordResponse:
     """
-    Reset user password
+    Reset user password with token
     """
-    # Todo add rate limiting and source_ip validation to prevent abuse
-    user = session.exec(select(User).where(User.username == username)).first()
-    password = user_reset_password.password
-    if not user:
-        raise HTTPException(status_code=404, detail="Unable to reset password")
-    user_reset_password: UserPasswordReset = session.exec(
-        select(UserPasswordReset)
-        .where(UserPasswordReset.token == user_reset_password.token)
-        .where(UserPasswordReset.user_id == user.id)
-    ).first()
-    if not user_reset_password:
-        raise HTTPException(status_code=404, detail="Unable to reset password")
-    if user_reset_password.expires_at < datetime.now():
-        session.delete(user_reset_password)
-        session.commit()
-        raise HTTPException(status_code=404, detail="Unable to reset password")
-    # Check password strength (i know this is not the best way to do but i am lazy :p )
-    if len(password) <= 12:
-        raise HTTPException(status_code=400, detail="Password must be at least 12 characters long")
-    if not any(char.isdigit() for char in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one digit")
-    if not any(char.isupper() for char in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
-    if not any(char.islower() for char in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
-    if not any(char in "!@#$%^&*()-_=+[]{}|;:,.<>?/" for char in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one special character")
-    user.password = hash_password(password)
-    session.delete(user_reset_password)
-    session.commit()
-    return UserResetPasswordResponse(message="Password reset successfully")
+    user_manager = UserManager(session)
+    if not user_manager.validate_password(user_reset_password.password):
+        raise HTTPException(status_code=400, detail="Password is not valid")
+    if user_manager.reset_password(username, user_reset_password.token, user_reset_password.password):
+        return UserResetPasswordResponse(message="Password reset successfully")
+    raise HTTPException(status_code=400, detail="Unable to reset password")
+
 
 @router.post("/{username}/change-password", response_model=UserResetPasswordResponse, tags=["users"])
 def change_password(
@@ -198,16 +172,16 @@ def change_password(
         session: Session = Depends(get_session)
     ) -> UserResetPasswordResponse:
     """
-    Change user password
+    Change user password need to be logged in
     """
     auth.is_admin_or_self(user, username)
-    user = session.exec(select(User).where(User.username == username)).first()
+    user_manager = UserManager(session)
+    user = user_manager.get_user_by_name(username)
     if not user:
         raise HTTPException(status_code=404, detail="Unable to change password")
-    password = user_password_update.password
-    user.password = hash_password(password)
-    session.add(user)
-    session.commit()
+    if not user_manager.validate_password(user_password_update.password):
+        raise HTTPException(status_code=400, detail="Password is not valid")
+    user_manager.set_user_password(user, user_password_update.password)
     return UserResetPasswordResponse(message="Password changed successfully")
 
 @router.get("/{username}/vpn-group", response_model=UserMeshGroup, tags=["users"])

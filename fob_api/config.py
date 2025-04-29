@@ -1,5 +1,6 @@
 from os import environ
 
+
 def parse_bool(value: str) -> bool:
     """
     Parse a string to a boolean value
@@ -12,7 +13,9 @@ def parse_bool(value: str) -> bool:
         return True
     if value.lower() in list_of_false:
         return False
-    raise ValueError(f"Value {value} is not recognized as a boolean use one of {list_of_true + list_of_false}")
+    raise ValueError(f"Value {value} is not recognized as a boolean use one of"
+                     f"{list_of_true + list_of_false}")
+
 
 class SingletonMeta(type):
 
@@ -55,7 +58,8 @@ class Config(metaclass=SingletonMeta):
         print("Initializing Config Singleton")
 
         if not environ.get("DISABLE_DOTENV", False):
-            print("Loading .env file into environment (You can disable this by setting DISABLE_DOTENV=True)")
+            print(
+                "Loading .env file into environment (You can disable this by setting DISABLE_DOTENV=True)")
             from dotenv import load_dotenv
             load_dotenv()
 
@@ -86,9 +90,10 @@ class Config(metaclass=SingletonMeta):
         not_set = [
             key.upper()
             for key, value in self.__dict__.items()
-            if value == None and key.upper() not in ignore
+            if value is None and key.upper() not in ignore
         ]
 
         if not_set:
-            raise ValueError(f"Environment variables not set: {', '.join(not_set)}")
+            raise ValueError(f"Environment variables not set: {
+                             ', '.join(not_set)}")
         print("Config Singleton initialized")
