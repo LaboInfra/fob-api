@@ -64,7 +64,6 @@ def create_user(
         source_ip="",
         expires_at=datetime.now() + timedelta(days=TIME_DAY_DELTA)
     )
-    session.add(user_reset_password)
 
     try:
         mail.send_mail(new_user.email, 'Your LaboInfra account has been created.', 'account_created.html.j2', {
@@ -72,13 +71,13 @@ def create_user(
             "token": user_reset_password.token,
             "expire_time": str(TIME_DAY_DELTA) + " days"
         })
-    except mail.SMTPRecipientsRefused:
-        print("Failed to send email, deleting user")
+    except Exception as e:
+        print("Failed to send email, deleting user", e)
         session.delete(new_user)
-    except ConnectionRefusedError:
-        config = Config()
-        print(f"Failed to connect to mail server, leaving user in database ({config.mail_server}:{config.mail_port})")
+        session.commit()
+        raise HTTPException(status_code=500, detail="Failed to send email")
     
+    session.add(user_reset_password)
     session.commit()
 
     task_sync_user.delay(new_user.username)

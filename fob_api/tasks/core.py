@@ -22,8 +22,9 @@ def sync_user(username: str):
       user = results.one()
       user.last_synced = datetime.now()
       headscale.get_or_create_user(username)
-      OpenStackManager.get_keystone_client(username)
+      OpenStackManager(session).get_or_create_user(username)
       headscale.add_user_to_group(username, "cloud-edge")
+
       session.add(user)
       session.commit()
       session.refresh(user)

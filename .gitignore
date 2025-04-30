@@ -11,3 +11,4 @@ celerybeat-schedule.*
 *.prod.*
 .coverage
 .vscode/
+tmp_headscale_secret

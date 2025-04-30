@@ -14,10 +14,10 @@ init:
 	@echo "MAIL_SERVER=maildev" >> .env
 	@echo "MAIL_USERNAME=dev@laboinfra.net" >> .env
 	@echo "MAIL_STARTTLS=no" >> .env
-	@sudo docker exec -it headscale headscale --config /etc/headscale/headscale.yml apikeys create -o json | tr -d '"' > tmp_headscale_secret
-	@echo "HEADSCALE_TOKEN=$(cat tmp_headscale_secret)" >> .env
+	#@docker exec -it headscale headscale --config /etc/headscale/headscale.yml apikeys create -o json | tr -d '"' > tmp_headscale_secret
+	#@echo "HEADSCALE_TOKEN=$(cat tmp_headscale_secret)" >> .env
 	@echo "HEADSCALE_ENDPOINT=http://headscale:8080" >> .env
-	@rm -rfv tmp_headscale_secret
+
 
 	@echo "Add adminrc in .env"
 	@cat adminrc >> .env
@@ -30,7 +30,7 @@ init:
 
 admin:
 	@echo "Create default superuser"
-	poetry run python -m fob_api contact@laboinfra.net laboinfra_admin laboinfra_admin
+	poetry run python -m fob_api contact@laboinfra.net contact contact
 
 serv:
 	poetry run python -m uvicorn fob_api.main:app --reload
@@ -59,3 +59,6 @@ migration:
 docker:
 	@echo "Build docker image"
 	@sudo docker build -t fastonboard .
+
+test:
+	poetry run pytest -v -W ignore::DeprecationWarning

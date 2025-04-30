@@ -1,5 +1,5 @@
 from .tasks import TaskInfo
-from .token import Token, TokenValidate
+from .token import Token, TokenValidate, TokenInfoID
 from .device import (
     CreateDevice,
     Device,

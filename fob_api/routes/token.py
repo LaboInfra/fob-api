@@ -7,7 +7,8 @@ from sqlmodel import Session, select
 from fob_api import auth, get_session
 from fob_api.models.database import User
 from fob_api.models.database import Token as TokenDB
-from fob_api.models.api import Token, TokenValidate
+from fob_api.models.api import Token, TokenValidate, TokenInfoID
+from fob_api.managers import TokenManager
 
 router = APIRouter()
 
@@ -19,17 +20,7 @@ def get_token(
     user = auth.basic_auth_validator(form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token_data = auth.make_token_data(user.username)
-    token_db: TokenDB = TokenDB(
-        expires_at=token_data["exp"],
-        created_at=token_data["iat"],
-        token_id=token_data["jti"],
-        user_id=user.id,
-    )
-    session.add(token_db)
-    session.commit()
-    token = auth.encode_token(token_data)
-    return Token(access_token=token, token_type="bearer")
+    return Token(access_token=TokenManager(session).create_token(user), token_type="bearer")
 
 
 @router.get("/token/refreshtoken", response_model=Token, tags=["token"])
@@ -37,17 +28,7 @@ def refresh_token(
         user: Annotated[User, Depends(auth.get_current_user)],
         session: Session = Depends(get_session)
     ) -> Token:
-    token_data = auth.make_token_data(user.username)
-    token_db: TokenDB = TokenDB(
-        expires_at=token_data["exp"],
-        created_at=token_data["iat"],
-        token_id=token_data["jti"],
-        user_id=user.id,
-    )
-    session.add(token_db)
-    session.commit()
-    token = auth.encode_token(token_data)
-    return Token(access_token=token, token_type="bearer")
+    return Token(access_token=TokenManager(session).create_token(user), token_type="bearer")
 
 @router.delete("/token/{jti}", tags=["token"])
 def revoke_token(
@@ -55,12 +36,22 @@ def revoke_token(
         user: Annotated[User, Depends(auth.get_current_user)],
         session: Session = Depends(get_session)
     ) -> None:
-    token = session.exec(select(TokenDB).where(TokenDB.token_id == jti)).first()
-    if not token or token.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Cant revoke token")
-    session.delete(token)
-    session.commit()
+    # todo check if token is owned by user
+    TokenManager(session).delete_token(jti)
 
 @router.get("/token/verify", response_model=TokenValidate, tags=["token"])
 def verify_token(user: Annotated[User, Depends(auth.get_current_user)]) -> TokenValidate:
+    # todo user token manger
     return TokenValidate(valid=True)
+
+@router.get("/token", tags=["token"])
+def list_token(
+        user: Annotated[User, Depends(auth.get_current_user)],
+        session: Session = Depends(get_session)
+    ) -> list[TokenInfoID]:
+    # todo check if token is owned by user
+    return [TokenInfoID(
+        jti=token.token_id,
+        created_at=token.created_at,
+        expires_at=token.expires_at,
+    ) for token in TokenManager(session).list_token(user.id)]
