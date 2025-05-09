@@ -4,6 +4,10 @@ from fob_api import auth
 from sqlmodel import select
 
 class TokenManager:
+
+    """
+    TokenManager is responsible for managing user tokens for authentication.
+    """
     
     session = None
 

@@ -99,6 +99,7 @@ class UserManager():
             return False
         if not any(char in "!@#$%^&*()-_=+[]{}|;:,.<>?/" for char in password):
             return False
+        return True
     
     def set_user_password(self, user: User, password: str) -> bool:
         """
@@ -119,7 +120,7 @@ class UserManager():
         if not self.validate_reset_password_token(user, token):
             return False
 
-        if not self.validate_reset_password_token(password):
+        if not self.validate_password(password):
             return False
 
         self.set_user_password(user, password)
