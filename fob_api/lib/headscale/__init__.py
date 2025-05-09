@@ -374,7 +374,12 @@ class Policy(BaseModel):
         return Policy(__driver__=self.__driver__, **server_reply.json())
 
     def get_policy_data(self) -> 'PolicyData':
-        return self.get().policy
+        try:
+            return self.get().policy
+        except Exception as e:
+            if "acl policy not found" in str(e):
+                return None
+            raise e
 
     def dump(self, policy_data: PolicyData) -> str:
         return json.dumps(policy_data.__dict__, default=lambda o: o.__dict__, sort_keys=True, indent=4)

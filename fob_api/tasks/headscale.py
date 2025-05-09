@@ -93,7 +93,10 @@ def update_headscale_policy() -> tuple:
     Update HeadScale Policy Data from Database if there are changes
     """
     new_pldt = build_headscale_policy_from_db()
-    old_pldt_str = headscale_driver.policy.dump(headscale_driver.policy.get_policy_data())
+    old_pldt = headscale_driver.policy.get_policy_data()
+    old_pldt_str = None
+    if old_pldt:
+        old_pldt_str = headscale_driver.policy.dump(headscale_driver.policy.get_policy_data())
     new_pldt_str = headscale_driver.policy.dump(new_pldt)
     if old_pldt_str != new_pldt_str:
         headscale_driver.policy.update(new_pldt)
