@@ -15,8 +15,8 @@ random_end_uid = lambda: str(uuid4()).split('-')[-1]
 random_password = lambda: "".join(choices(ascii_letters + digits, k=16))
 
 # TODO move to config
-OPENSTACK_DOMAIN_ID = "cbd81d851be944aeb22873cc9919c82c"
-OPENSTACK_ROLE_MEMBER_ID = "33db095e110f421487ad379176873aff"
+OPENSTACK_DOMAIN_ID = Config().openstack_domain_id
+OPENSTACK_ROLE_MEMBER_ID = Config().openstack_role_member_id
 
 # Initialize configuration and database engine
 engine = init_engine()

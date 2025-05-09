@@ -53,6 +53,9 @@ class Config(metaclass=SingletonMeta):
     os_project_domain_name: str
     os_auth_url: str
 
+    openstack_domain_id: str
+    openstack_role_member_id: str
+
     def __init__(self):
         print("Initializing Config Singleton")
 
@@ -83,6 +86,9 @@ class Config(metaclass=SingletonMeta):
         self.os_user_domain_name = environ.get("OS_USER_DOMAIN_NAME")
         self.os_project_domain_name = environ.get("OS_PROJECT_DOMAIN_NAME")
         self.os_auth_url = environ.get("OS_AUTH_URL")
+
+        self.openstack_domain_id = environ.get("OPENSTACK_DOMAIN_ID")
+        self.openstack_role_member_id = environ.get("OPENSTACK_ROLE_MEMBER_ID")
 
         ignore = ["MAIL_PASSWORD"]
 
