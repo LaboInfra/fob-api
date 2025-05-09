@@ -25,7 +25,7 @@ class OpenStackManager:
             self.session = session
         self.config = Config()
 
-    def __build_session(self):
+    def _build_session(self):
         """
         Build a session for OpenStack authentication.
         :return: A session object for OpenStack authentication.
@@ -44,28 +44,28 @@ class OpenStackManager:
         Returns a keystone client object.
         :return: A keystone client object.
         """
-        return keystone_client.Client(session=self.__build_session())
+        return keystone_client.Client(session=self._build_session())
 
     def get_nova_client(self) -> nova_client.Client:
         """
         Returns a nova client object.
         :return: A nova client object.
         """
-        return nova_client.Client(2, session=self.__build_session())
+        return nova_client.Client(2, session=self._build_session())
 
     def get_neutron_client(self) -> neutron_client.Client:
         """
         Returns a neutron client object.
         :return: A neutron client object.
         """
-        return neutron_client.Client(session=self.__build_session())
+        return neutron_client.Client(session=self._build_session())
 
     def get_cinder_client(self) -> cinder_client.Client:
         """
         Returns a cinder client object.
         :return: A cinder client object.
         """
-        return cinder_client.Client("3", session=self.__build_session())
+        return cinder_client.Client("3", session=self._build_session())
 
     def get_or_create_user(self, username: str):
         """

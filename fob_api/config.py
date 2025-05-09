@@ -1,6 +1,5 @@
 from os import environ
 
-
 def parse_bool(value: str) -> bool:
     """
     Parse a string to a boolean value
@@ -97,3 +96,62 @@ class Config(metaclass=SingletonMeta):
             raise ValueError(f"Environment variables not set: {
                              ', '.join(not_set)}")
         print("Config Singleton initialized")
+
+    def validate_openstack_credentials(self) -> bool:
+        """
+        Validate the OpenStack credentials
+        :return: True if the credentials are valid, False otherwise
+        """
+        from fob_api.managers import OpenStackManager
+        osm = OpenStackManager()
+        try:
+            osm.get_keystone_client().endpoints.list()
+            print("OpenStack credentials are valid")
+            return True
+        except Exception as e:
+            print(f"Error validating OpenStack credentials: {e}")
+            return False
+    
+    def validate_headscale_credentials(self) -> bool:
+        """
+        Validate the Headscale credentials
+        :return: True if the credentials are valid, False otherwise
+        """
+        from fob_api import headscale_driver
+        try:
+            headscale_driver.user.list()
+            print("Headscale credentials are valid")
+            return True
+        except Exception as e:
+            print(f"Error validating Headscale credentials: {e}")
+            return False
+
+    def validate_email(self) -> bool:
+        """
+        Validate the email credentials
+        :return: True if the credentials are valid, False otherwise
+        """
+        from fob_api import mail
+        try:
+            mail.send_text_mail(
+                subject="Test email sending credentials validation",
+                receivers=[self.mail_sender],
+                body="This is a test email",
+            )
+            print("Email credentials are valid")
+            return True
+        except Exception as e:
+            print(f"Error validating email credentials: {e}")
+            return False
+    
+    def validate_all(self) -> bool:
+        """
+        Validate all credentials
+        :return: True if all credentials are valid, False otherwise
+        """
+        print("Validating all credentials")
+        return (
+            self.validate_openstack_credentials() and
+            self.validate_headscale_credentials() and
+            self.validate_email()
+        )
