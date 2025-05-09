@@ -1,9 +1,23 @@
-env:
-	make init
-
 init:
-	@echo "Remove old .env"
-	rm -rfv .env
+	@make dev
+
+clean:
+	@echo "Cleaning up..."
+	@echo "Removing .env"
+	@rm -rf .env
+	@echo "Removing tmp_headscale_secret"
+	@rm -rf tmp_headscale_secret
+	@echo "Removing __pycache__ and *.pyc files"
+	@find . -name "__pycache__" -type d -exec rm -fr {} + -o -name "*.pyc" -exec rm -rf {} +
+	@echo "Removing celerybeat-schedule files"
+	@rm -rf celerybeat-schedule.*
+	@echo "Removing .pytest_cache"
+	@rm -rf .pytest_cache
+	@echo "Removing .coverage"
+	@rm -rf .coverage
+
+dev:
+	@make clean
 
 	@echo "Create .env"
 	@echo "DATABASE_URL=mysql+pymysql://fastonboard:fastonboard@mariadb:3306/fastonboard" >> .env
@@ -15,7 +29,7 @@ init:
 	@echo "MAIL_USERNAME=dev@laboinfra.net" >> .env
 	@echo "MAIL_STARTTLS=no" >> .env
 	@sudo docker exec -it headscale headscale --config /etc/headscale/headscale.yml apikeys create -o json | tr -d '"' > tmp_headscale_secret
-	@echo "HEADSCALE_TOKEN=$(cat tmp_headscale_secret)" >> .env
+	@echo HEADSCALE_TOKEN=$(shell cat tmp_headscale_secret) >> .env
 	@echo "HEADSCALE_ENDPOINT=http://headscale:8080" >> .env
 	@rm -rfv tmp_headscale_secret
 
@@ -23,11 +37,26 @@ init:
 	@cat adminrc >> .env
 	@sed -i 's/export //g' .env
 
+	@make deps
+
+prod:
+	@make clean
+
+	@if [ ! -f .prod.env ]; then \
+		echo "❌ .prod.env is missing. Aborting."; \
+		exit 1; \
+	fi
+	@echo ".prod.env found"
+	@echo "Replacing .env with .prod.env"
+	@cp -v .prod.env .env
+	@echo "Warning you are using production env variables"
+
+	@make deps
+
+deps:
 	@echo "Poetry install libs for api"
 	@poetry install
-	@echo "Run database migration"
-	poetry run alembic upgrade head
-
+	
 admin:
 	@echo "Create default superuser"
 	poetry run python -m fob_api contact@laboinfra.net laboinfra_admin laboinfra_admin
@@ -45,6 +74,7 @@ flower:
 	poetry run celery -A fob_api.worker flower
 
 migrate:
+	@echo "Run database migration"
 	poetry run alembic upgrade head
 
 .PHONY: migration
