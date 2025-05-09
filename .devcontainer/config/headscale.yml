@@ -50,7 +50,7 @@ log:
   format: text
   level: info
 policy:
-  mode: file
+  mode: database
   path: ""
 dns:
   magic_dns: true

@@ -28,7 +28,7 @@ dev:
 	@echo "MAIL_SERVER=maildev" >> .env
 	@echo "MAIL_USERNAME=dev@laboinfra.net" >> .env
 	@echo "MAIL_STARTTLS=no" >> .env
-	@echo "OPENSTACK_DOMAIN_NAME=17ce459953da48e4865bbaedef898e0c" >> .env
+	@echo "OPENSTACK_DOMAIN_ID=17ce459953da48e4865bbaedef898e0c" >> .env
 	@echo "OPENSTACK_ROLE_MEMBER_ID=07d5daa425664bd49d88da561fe868e5" >> .env
 	@sudo docker exec -it headscale headscale --config /etc/headscale/headscale.yml apikeys create -o json | tr -d '"' > tmp_headscale_secret
 	@cat tmp_headscale_secret

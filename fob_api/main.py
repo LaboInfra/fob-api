@@ -1,4 +1,8 @@
 from fastapi import FastAPI
+from fob_api import Config
+
+if not Config().validate_all():
+    raise ValueError("Invalid configuration. Please check your environment variables.")
 
 from fob_api import engine, routes
 
