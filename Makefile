@@ -29,6 +29,7 @@ dev:
 	@echo "MAIL_USERNAME=dev@laboinfra.net" >> .env
 	@echo "MAIL_STARTTLS=no" >> .env
 	@sudo docker exec -it headscale headscale --config /etc/headscale/headscale.yml apikeys create -o json | tr -d '"' > tmp_headscale_secret
+	@cat tmp_headscale_secret
 	@echo HEADSCALE_TOKEN=$(shell cat tmp_headscale_secret) >> .env
 	@echo "HEADSCALE_ENDPOINT=http://headscale:8080" >> .env
 
