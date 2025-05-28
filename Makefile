@@ -35,6 +35,9 @@ dev:
 	@echo HEADSCALE_TOKEN=$(shell cat tmp_headscale_secret) >> .env
 	@echo "HEADSCALE_ENDPOINT=http://headscale:8080" >> .env
 
+	@echo "OPENSTACK_DOMAIN_ID=17ce459953da48e4865bbaedef898e0c" >> .env
+	@echo "OPENSTACK_ROLE_MEMBER_ID=07d5daa425664bd49d88da561fe868e5" >> .env
+
 	@echo "Add adminrc in .env"
 	@cat adminrc >> .env
 	@sed -i 's/export //g' .env

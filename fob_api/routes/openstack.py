@@ -136,7 +136,7 @@ def reset_openstack_user_password(
     Reset OpenStack user password
     """
     auth.is_admin_or_self(user, username)
-    user_find = UserManager(session).get_user(username)
+    user_find = UserManager(session).get_user_by_name(username)
     if not user_find:
         raise HTTPException(status_code=404, detail="User not found")
     rand_password = random_password()
