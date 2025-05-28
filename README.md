@@ -15,3 +15,5 @@ with this api you can:
 ### Environment Variables
 
 > Check the Makefile for more information
+
+> Note: For developpement you will need a devstack infra and populate the file adminrc

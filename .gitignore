@@ -9,3 +9,5 @@ adminrc
 .prod
 celerybeat-schedule.*
 *.prod.*
+.coverage
+.vscode/

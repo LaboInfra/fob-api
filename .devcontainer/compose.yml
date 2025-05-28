@@ -32,11 +32,6 @@ services:
       - "8046:9090"
     command: serve --config /etc/headscale/headscale.yml
 
-  keystone:
-    image: docker.io/openstackhelm/keystone:2024.1-ubuntu_jammy
-    container_name: keystone
-    command: sleep infinity
-
   redis:
     image: redis:alpine
     container_name: redis
