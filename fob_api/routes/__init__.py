@@ -8,3 +8,4 @@ from .devices import router as vpn_router
 from .headscale import router as headscale_router
 from .openstack import router as openstack_router
 from .quota import router as quota_router
+from .proxy import router as proxy_router
