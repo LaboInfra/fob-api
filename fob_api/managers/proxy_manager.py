@@ -56,7 +56,7 @@ class ProxyManager:
             return self.default_traefik_config
         new_maps = self.default_traefik_config.copy()
         for service in proxy_service_maps:
-            project = self.session.exec(select(Project).where(Project.id == service.project_id)).first()
+            project = self.session.get(Project, service.project_id)
             if not project:
                 continue
             uniq_name = f"{base64.b64encode(service.rule.encode()).decode()}".replace("=", "")[5:25]
@@ -82,3 +82,46 @@ class ProxyManager:
                 }
             }
         return new_maps
+    
+    def create_proxy(self, project: Project, rule: str, target: str):
+        """
+        Create a new proxy service map.
+        """
+        # check if not already exists
+        existing_proxy = self.session.exec(
+            select(ProxyServiceMap).where(
+                (ProxyServiceMap.project_id == project.id) &
+                (ProxyServiceMap.rule == rule) &
+                (ProxyServiceMap.target == target)
+            )
+        ).first()
+        if existing_proxy:
+            return existing_proxy
+        new_proxy = ProxyServiceMap(project_id=project.id, rule=rule, target=target)
+        self.session.add(new_proxy)
+        self.session.commit()
+        return new_proxy
+    
+    def get_proxy_by_project(self, project: Project):
+        """
+        Get all proxy service maps for a given project.
+        """
+    
+        return self.session.exec(select(ProxyServiceMap).where(ProxyServiceMap.project_id == project.id)).all()
+    
+    def delete_proxy(self, proxy: ProxyServiceMap):
+        """
+        Delete a proxy service map.
+        """    
+        self.session.delete(proxy)
+        self.session.commit()
+        return True
+    
+    def validate_targets(self, targets: list[str]) -> bool:
+        """
+        Validate the target URL format. Only allow student networks.
+        """
+        for target in targets:
+            if not target.startswith("http://172.16"):
+                return False
+        return True

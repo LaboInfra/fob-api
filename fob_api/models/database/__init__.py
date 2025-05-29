@@ -17,5 +17,7 @@ from .openstack import (
     UserQuotaShare
 )
 from .proxy import (
-    ProxyServiceMap
+    ProxyServiceMap,
+    ProxyServiceMapCreate,
+    ProxyServiceMapPublic
 )
