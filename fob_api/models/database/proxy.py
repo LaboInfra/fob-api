@@ -14,6 +14,8 @@ class ProxyServiceMap(ProxyServiceMapCreate, table=True):
 
     id: int = Field(primary_key=True)
     created_at: datetime = Field(default=datetime.now())
+    latest_dns_check: datetime = Field(default=None, nullable=True)  # Last DNS check timestamp
+    latest_dns_check_result: bool = Field(default=None, nullable=True)  # Result of the last DNS check (True/False)
 
 class ProxyServiceMapPublic(ProxyServiceMapCreate):
     """

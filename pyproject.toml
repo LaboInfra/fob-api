@@ -29,6 +29,7 @@ python-neutronclient = "^11.4.0"
 pytest = "^8.3.5"
 pytest-cov = "^6.1.1"
 httpx = "^0.28.1"
+dnspython = "^2.7.0"
 
 [build-system]
 requires = ["poetry-core"]

@@ -38,8 +38,12 @@ celery.conf.update(
         'fastonboard.token.purge_expired': {
             'task': 'fastonboard.token.purge_expired',
             'schedule': 60 * 60 * 24 # every day
+        },
+        'validate_proxy_domain_host': {
+            'task': 'fob_api.tasks.validate_proxy_domain_host',
+            'schedule': 60 # every minute
         }
     }
 )
 # import need to be after celery is defined to avoid circular import
-from fob_api.tasks import core, headscale
+from fob_api.tasks import core, headscale, dns_cmd

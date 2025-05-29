@@ -50,8 +50,7 @@ class ProxyManager:
     
     def build_treafik_config(self):
         # loop over all ProxyServiceMap entries and build the Traefik config
-        
-        proxy_service_maps = self.session.exec(select(ProxyServiceMap)).all()
+        proxy_service_maps = self.session.exec(select(ProxyServiceMap).where(ProxyServiceMap.latest_dns_check_result == True)).all()
         if not proxy_service_maps:
             return self.default_traefik_config
         new_maps = self.default_traefik_config.copy()
@@ -109,6 +108,12 @@ class ProxyManager:
     
         return self.session.exec(select(ProxyServiceMap).where(ProxyServiceMap.project_id == project.id)).all()
     
+    def get_all_proxies(self):
+        """
+        Get all proxy service maps.
+        """
+        return self.session.exec(select(ProxyServiceMap)).all()
+
     def delete_proxy(self, proxy: ProxyServiceMap):
         """
         Delete a proxy service map.

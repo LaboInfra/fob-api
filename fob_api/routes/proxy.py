@@ -47,7 +47,11 @@ def create_proxy_service_map(
     
     if not pm.validate_targets(service_map.target.split(",")):
         raise HTTPException(status_code=400, detail="Invalid target format")
-    
+    if service_map.rule.startswith("http://") or service_map.rule.startswith("https://"):
+        raise HTTPException(
+            status_code=400,
+            detail="Rule must be a domain name, not a URL. Use '`example.com`' format."
+        )
     return pm.create_proxy(
         project=project,
         rule=service_map.rule,

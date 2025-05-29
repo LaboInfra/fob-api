@@ -55,6 +55,7 @@ class Config(metaclass=SingletonMeta):
     openstack_role_member_id: str | None
 
     traefik_config_password: str | None
+    traefik_host_ip: str | None
 
     def __init__(self):
         print("Initializing Config Singleton")
@@ -90,6 +91,7 @@ class Config(metaclass=SingletonMeta):
         self.openstack_role_member_id = environ.get("OPENSTACK_ROLE_MEMBER_ID")
 
         self.traefik_config_password = environ.get("TRAEFIK_CONFIG_PASSWORD")
+        self.traefik_host_ip = environ.get("TRAEFIK_HOST_IP")
 
         ignore = ["MAIL_PASSWORD"]
 

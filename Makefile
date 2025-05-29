@@ -35,6 +35,7 @@ dev:
 	@echo HEADSCALE_TOKEN=$(shell cat tmp_headscale_secret) >> .env
 	@echo "HEADSCALE_ENDPOINT=http://headscale:8080" >> .env
 	@echo "TRAEFIK_CONFIG_PASSWORD=traefik" >> .env
+	@echo "TRAEFIK_HOST_IP=8.8.8.8" >> .env
 	@rm -rfv tmp_headscale_secret
 
 	@echo "Add adminrc in .env"
