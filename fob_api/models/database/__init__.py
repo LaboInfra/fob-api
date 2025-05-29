@@ -16,3 +16,8 @@ from .openstack import (
     ProjectUserMembership,
     UserQuotaShare
 )
+from .proxy import (
+    ProxyServiceMap,
+    ProxyServiceMapCreate,
+    ProxyServiceMapPublic
+)

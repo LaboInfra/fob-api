@@ -27,32 +27,35 @@ class SingletonMeta(type):
 
 class Config(metaclass=SingletonMeta):
 
-    database_url: str
+    database_url: str | None
 
-    headscale_endpoint: str
-    headscale_token: str
+    headscale_endpoint: str | None
+    headscale_token: str | None
 
-    celery_broker_url: str
-    celery_result_backend: str
+    celery_broker_url: str | None
+    celery_result_backend: str | None
 
-    jwt_secret_key: str
+    jwt_secret_key: str | None
 
-    mail_server: str
-    mail_port: int
-    mail_username: str
-    mail_password: str
-    mail_starttls: bool
-    mail_sender: str
+    mail_server: str | None
+    mail_port: int | None
+    mail_username: str | None
+    mail_password: str | None
+    mail_starttls: bool | None
+    mail_sender: str | None
 
-    os_username: str
-    os_password: str
-    os_project_name: str
-    os_user_domain_name: str
-    os_project_domain_name: str
-    os_auth_url: str
+    os_username: str | None
+    os_password: str | None
+    os_project_name: str | None
+    os_user_domain_name: str | None
+    os_project_domain_name: str | None
+    os_auth_url: str | None
 
-    openstack_domain_id: str
-    openstack_role_member_id: str
+    openstack_domain_id: str | None
+    openstack_role_member_id: str | None
+
+    traefik_config_password: str | None
+    traefik_host_ip: str | None
 
     def __init__(self):
         print("Initializing Config Singleton")
@@ -71,10 +74,10 @@ class Config(metaclass=SingletonMeta):
         self.jwt_secret_key = environ.get("JWT_SECRET_KEY")
 
         self.mail_server = environ.get("MAIL_SERVER")
-        self.mail_port = int(environ.get("MAIL_PORT"))
+        self.mail_port = int(environ.get("MAIL_PORT", "587"))
         self.mail_username = environ.get("MAIL_USERNAME")
         self.mail_password = environ.get("MAIL_PASSWORD")
-        self.mail_starttls = parse_bool(environ.get("MAIL_STARTTLS"))
+        self.mail_starttls = parse_bool(environ.get("MAIL_STARTTLS", "true"))
         self.mail_sender = environ.get("MAIL_SENDER") or self.mail_username
 
         self.os_username = environ.get("OS_USERNAME")
@@ -86,6 +89,9 @@ class Config(metaclass=SingletonMeta):
 
         self.openstack_domain_id = environ.get("OPENSTACK_DOMAIN_ID")
         self.openstack_role_member_id = environ.get("OPENSTACK_ROLE_MEMBER_ID")
+
+        self.traefik_config_password = environ.get("TRAEFIK_CONFIG_PASSWORD")
+        self.traefik_host_ip = environ.get("TRAEFIK_HOST_IP")
 
         ignore = ["MAIL_PASSWORD"]
 

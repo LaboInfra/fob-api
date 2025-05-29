@@ -1,0 +1,59 @@
+global:
+  # Send anonymous usage data
+  sendAnonymousUsage: false
+  checkNewVersion: false
+
+log:
+  filePath: "traefik.log"
+  level: INFO
+  maxSize: 100 # in megabytes
+  maxBackups: 3
+  compress: true
+
+accesslog:
+  addInternals: true
+  filePath: "access.log"
+  bufferingSize: 100
+
+metrics:
+  addInternals: true
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    entryPoint: metrics
+
+api:
+  insecure: true
+  dashboard: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+  ping:
+    address: ":8082"
+  metrics:
+    address: ":8083"
+
+ping:
+  entryPoint: "ping"
+
+providers:
+  http:
+    endpoint: "http://devcontainer:8000/proxy/"
+    pollInterval: "5s"
+    pollTimeout: "5s"
+    headers:
+      # Use Basic Auth for local development is traefik:traefik
+      Authorization: Basic dHJhZWZpazp0cmFlZmlr
+      
+
+certificatesResolvers:
+  certificateResolver:
+    acme:
+      email: contact@laboinfra.net
+      storage: acme.json
+      httpChallenge:
+        entryPoint: web

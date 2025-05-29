@@ -11,7 +11,7 @@ from jose.jwt import JWTError, ExpiredSignatureError, JWTClaimsError
 from sqlmodel import Session, select
 
 from fob_api.config import Config
-from fob_api.models.database import User
+from fob_api.models.database import User, ProjectUserMembership, Project
 from fob_api.models.database import Token as TokenDB
 from fob_api import engine
 
@@ -46,7 +46,6 @@ def make_token_data(username: str) -> dict:
 def encode_token(token_data) -> str:
     return jwt.encode(token_data, jwt_secret, algorithm="HS256")
 
-
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> User:
     try:
         payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
@@ -58,7 +57,6 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> User:
         raise HTTPException(status_code=401, detail="Invalid token")
     except (JWTClaimsError, ExpiredSignatureError, JWTError) as e:
         raise HTTPException(status_code=401, detail=f"JWT Error: {e}")
-
 
 def basic_auth_validator(username: str, password: str) -> User:
     with Session(engine) as session:
@@ -76,3 +74,19 @@ def is_admin_or_self(user: User, username: str):
     """Check if the user is an admin or the user itself"""
     if not user.is_admin and user.username != username:
         raise HTTPException(status_code=403, detail="Not enough permissions")
+
+def is_project_owner_or_member(user: User, project_id: int) -> Project:
+    """Check if the user is the owner or a member of the project"""
+    with Session(engine) as session:
+        project = session.get(Project, project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found cannot check permissions")
+        project_member = session.exec(
+            select(ProjectUserMembership).where(
+                (ProjectUserMembership.project_id == project_id) &
+                (ProjectUserMembership.user_id == user.id)
+            )
+        ).first()
+        if project.owner_id == user.id or project_member:
+            return project
+    raise HTTPException(status_code=403, detail="Not enough permissions")
