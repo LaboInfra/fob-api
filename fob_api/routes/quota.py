@@ -1,4 +1,4 @@
-from typing import List, Annotated
+from typing import List, Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/quota")
 
 #--------------------------------
 # TODO: move to tasks
-def calculate_user_quota_by_type(user: db_models.User, quota_type: db_models.QuotaType, session: Session = None) -> api_models.AdjustUserQuota:
+def calculate_user_quota_by_type(user: db_models.User, quota_type: db_models.QuotaType, session: Optional[Session] = None) -> api_models.AdjustUserQuota:
     # Use provided session or create a new one for backward compatibility
     if session is None:
         with Session(engine) as session:
@@ -35,7 +35,7 @@ def calculate_user_quota_by_type(user: db_models.User, quota_type: db_models.Quo
         comment="Calculated total quota for user"
     )
 
-def calculate_user_quota(user: db_models.User, session: Session = None) -> List[api_models.AdjustUserQuota]:
+def calculate_user_quota(user: db_models.User, session: Optional[Session] = None) -> List[api_models.AdjustUserQuota]:
     # Use provided session or create a new one for backward compatibility
     if session is None:
         with Session(engine) as session:
@@ -52,7 +52,7 @@ def calculate_user_quota(user: db_models.User, session: Session = None) -> List[
         comment="Calculated total all type quota for user"
     ) for k, v in user_max_quota_dict.items()]
 
-def calculate_project_quota(project: db_models.Project, session: Session = None) -> List[api_models.AdjustProjectQuota]:
+def calculate_project_quota(project: db_models.Project, session: Optional[Session] = None) -> List[api_models.AdjustProjectQuota]:
     # Use provided session or create a new one for backward compatibility
     if session is None:
         with Session(engine) as session:
@@ -89,7 +89,7 @@ def sync_project_quota(openstack_project: db_models.Project) -> None:
             case _:
                 print(f"Unknown quota type: {quota.type} for project: {openstack_project.name} with quantity: {quota.quantity}")
 
-def get_user_left_quota_by_type(user: db_models.User, quota_type: db_models.QuotaType, session: Session = None) -> int:
+def get_user_left_quota_by_type(user: db_models.User, quota_type: db_models.QuotaType, session: Optional[Session] = None) -> int:
     # Use provided session or create a new one for backward compatibility
     if session is None:
         with Session(engine) as session:

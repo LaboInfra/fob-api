@@ -26,7 +26,7 @@ def validate_password_strength(password: str) -> None:
     Validate password strength in a single pass.
     Raises HTTPException if password doesn't meet requirements.
     """
-    if len(password) <= 12:
+    if len(password) < 13:
         raise HTTPException(status_code=400, detail="Password must be at least 12 characters long")
     
     has_digit = False
