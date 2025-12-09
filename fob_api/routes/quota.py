@@ -19,44 +19,56 @@ router = APIRouter(prefix="/quota")
 
 #--------------------------------
 # TODO: move to tasks
-def calculate_user_quota_by_type(user: db_models.User, quota_type: db_models.QuotaType) -> api_models.AdjustUserQuota:
-    with Session(engine) as session:
-        calculated_quota = 0
-        for q in session.exec(select(db_models.UserQuota).where(db_models.UserQuota.user_id == user.id).where(db_models.UserQuota.type == quota_type)).all():
-            calculated_quota += q.quantity
-        return api_models.AdjustUserQuota(
-            username=user.username,
-            type=quota_type,
-            quantity=calculated_quota,
-            comment="Calculated total quota for user"
-        )
+def calculate_user_quota_by_type(user: db_models.User, quota_type: db_models.QuotaType, session: Session = None) -> api_models.AdjustUserQuota:
+    # Use provided session or create a new one for backward compatibility
+    if session is None:
+        with Session(engine) as session:
+            return calculate_user_quota_by_type(user, quota_type, session)
+    
+    calculated_quota = 0
+    for q in session.exec(select(db_models.UserQuota).where(db_models.UserQuota.user_id == user.id).where(db_models.UserQuota.type == quota_type)).all():
+        calculated_quota += q.quantity
+    return api_models.AdjustUserQuota(
+        username=user.username,
+        type=quota_type,
+        quantity=calculated_quota,
+        comment="Calculated total quota for user"
+    )
 
-def calculate_user_quota(user: db_models.User) -> List[api_models.AdjustUserQuota]:
-    with Session(engine) as session:
-        user_max_quota_dict = {k: 0 for k in db_models.QuotaType}
-        for q in session.exec(select(db_models.UserQuota).where(db_models.UserQuota.user_id == user.id)).all():
-            user_max_quota_dict[db_models.QuotaType.from_str(q.type)] += q.quantity
+def calculate_user_quota(user: db_models.User, session: Session = None) -> List[api_models.AdjustUserQuota]:
+    # Use provided session or create a new one for backward compatibility
+    if session is None:
+        with Session(engine) as session:
+            return calculate_user_quota(user, session)
+    
+    user_max_quota_dict = {k: 0 for k in db_models.QuotaType}
+    for q in session.exec(select(db_models.UserQuota).where(db_models.UserQuota.user_id == user.id)).all():
+        user_max_quota_dict[db_models.QuotaType.from_str(q.type)] += q.quantity
 
-        return [api_models.AdjustUserQuota(
-            username=user.username,
-            type=k,
-            quantity=v,
-            comment="Calculated total all type quota for user"
-        ) for k, v in user_max_quota_dict.items()]
+    return [api_models.AdjustUserQuota(
+        username=user.username,
+        type=k,
+        quantity=v,
+        comment="Calculated total all type quota for user"
+    ) for k, v in user_max_quota_dict.items()]
 
-def calculate_project_quota(project: db_models.Project) -> List[api_models.AdjustProjectQuota]:
-    with Session(engine) as session:
-        project_max_quota_dict = {k: 0 for k in db_models.QuotaType}
-        for q in session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.project_id == project.id)).all():
-            project_max_quota_dict[db_models.QuotaType.from_str(q.type)] += q.quantity
+def calculate_project_quota(project: db_models.Project, session: Session = None) -> List[api_models.AdjustProjectQuota]:
+    # Use provided session or create a new one for backward compatibility
+    if session is None:
+        with Session(engine) as session:
+            return calculate_project_quota(project, session)
+    
+    project_max_quota_dict = {k: 0 for k in db_models.QuotaType}
+    for q in session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.project_id == project.id)).all():
+        project_max_quota_dict[db_models.QuotaType.from_str(q.type)] += q.quantity
 
-        return [api_models.AdjustProjectQuota(
-            username="",
-            project_name=project.name,
-            type=k,
-            quantity=v,
-            comment="Calculated total all type quota for project"
-        ) for k, v in project_max_quota_dict.items()]
+    return [api_models.AdjustProjectQuota(
+        username="",
+        project_name=project.name,
+        type=k,
+        quantity=v,
+        comment="Calculated total all type quota for project"
+    ) for k, v in project_max_quota_dict.items()]
 
 def sync_project_quota(openstack_project: db_models.Project) -> None:
     nova_client = openstack.get_nova_client()
@@ -77,17 +89,21 @@ def sync_project_quota(openstack_project: db_models.Project) -> None:
             case _:
                 print(f"Unknown quota type: {quota.type} for project: {openstack_project.name} with quantity: {quota.quantity}")
 
-def get_user_left_quota_by_type(user: db_models.User, quota_type: db_models.QuotaType) -> int:
-    with Session(engine) as session:
-        user_quota_own = 0
-        for q in session.exec(select(db_models.UserQuota).where(db_models.UserQuota.user_id == user.id).where(db_models.UserQuota.type == quota_type)).all():
-            user_quota_own += q.quantity
+def get_user_left_quota_by_type(user: db_models.User, quota_type: db_models.QuotaType, session: Session = None) -> int:
+    # Use provided session or create a new one for backward compatibility
+    if session is None:
+        with Session(engine) as session:
+            return get_user_left_quota_by_type(user, quota_type, session)
+    
+    user_quota_own = 0
+    for q in session.exec(select(db_models.UserQuota).where(db_models.UserQuota.user_id == user.id).where(db_models.UserQuota.type == quota_type)).all():
+        user_quota_own += q.quantity
 
-        user_quota_used = 0
-        for q in session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.user_id == user.id).where(db_models.UserQuotaShare.type == quota_type)).all():
-            user_quota_used += q.quantity
+    user_quota_used = 0
+    for q in session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.user_id == user.id).where(db_models.UserQuotaShare.type == quota_type)).all():
+        user_quota_used += q.quantity
 
-        return user_quota_own - user_quota_used
+    return user_quota_own - user_quota_used
 
 #--------------------------------
 
@@ -112,7 +128,7 @@ def give_quota_to_user(
     )
     session.add(new_quota)
     session.commit()
-    return calculate_user_quota_by_type(user_find, create_quota.type)
+    return calculate_user_quota_by_type(user_find, create_quota.type, session)
 
 @router.delete("/adjust-user/{id}", tags=["quota"])
 def remove_quota_attribution_for_user(
@@ -127,7 +143,7 @@ def remove_quota_attribution_for_user(
         raise HTTPException(status_code=400, detail="Adjustement not found")
     session.delete(quota)
     session.commit()
-    return calculate_user_quota_by_type(user, quota.type)
+    return calculate_user_quota_by_type(user, quota.type, session)
 
 @router.get("/user/{username}/total", tags=["quota"])
 def show_user_quota(
@@ -140,7 +156,7 @@ def show_user_quota(
     user_find = session.exec(select(db_models.User).where(db_models.User.username == username)).first()
     if not user_find:
         raise HTTPException(status_code=400, detail="User not found")
-    return calculate_user_quota(user_find)
+    return calculate_user_quota(user_find, session)
 
 @router.get("/user/{username}/adjustements", tags=["quota"])
 def show_user_adjustements(
@@ -201,7 +217,7 @@ def set_quota_to_project(
         previous_quantity = quota.quantity
 
     # check if user has enough quota to share
-    if get_user_left_quota_by_type(user_find, db_models.QuotaType.from_str(create_quota.type)) + previous_quantity < create_quota.quantity:
+    if get_user_left_quota_by_type(user_find, db_models.QuotaType.from_str(create_quota.type), session) + previous_quantity < create_quota.quantity:
         raise HTTPException(status_code=400, detail="User do not have enough quota to share")
 
     # check if user has already shared quota
@@ -230,7 +246,7 @@ def set_quota_to_project(
         raise HTTPException(status_code=400, detail="Error while setting quota you may use the quota that is already used")
         # this append when quota is set but project already use the quota so we need to rollback
 
-    return calculate_project_quota(project_find)
+    return calculate_project_quota(project_find, session)
 
 
 @router.get("/project/{project_name}/total", tags=["quota"])
@@ -245,7 +261,7 @@ def show_project_quota(
         raise HTTPException(status_code=400, detail="Project not found")
     if not user.is_admin and not session.exec(select(db_models.ProjectUserMembership).where(db_models.ProjectUserMembership.project_id == project_find.id, db_models.ProjectUserMembership.user_id == user.id)).first() and project_find.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not allowed to see Total quota for this project")
-    return calculate_project_quota(project_find)
+    return calculate_project_quota(project_find, session)
 
 @router.get("/project/{project_name}/adjustements", tags=["quota"])
 def show_project_adjustements(
@@ -260,12 +276,19 @@ def show_project_adjustements(
     if not user.is_admin and not session.exec(select(db_models.ProjectUserMembership).where(db_models.ProjectUserMembership.project_id == project_find.id, db_models.ProjectUserMembership.user_id == user.id)).first() and project_find.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not allowed to see Adjustements for this project")
 
+    # Fetch all quota shares for the project
+    quota_shares = session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.project_id == project_find.id)).all()
+    
+    # Batch fetch all users involved
+    user_ids = list(set(q.user_id for q in quota_shares))
+    users_map = {u.id: u.username for u in session.exec(select(db_models.User).where(db_models.User.id.in_(user_ids))).all()} if user_ids else {}
+    
+    # Build response
     shared_quotas = []
-    for q in session.exec(select(db_models.UserQuotaShare).where(db_models.UserQuotaShare.project_id == project_find.id)).all():
-        user = session.exec(select(db_models.User).where(db_models.User.id == q.user_id)).first()
+    for q in quota_shares:
         shared_quotas.append(api_models.AdjustProjectQuotaID(
             id=q.id,
-            username=user.username,
+            username=users_map.get(q.user_id, ""),
             project_name=project_find.name,
             type=db_models.QuotaType.from_str(q.type),
             quantity=q.quantity,

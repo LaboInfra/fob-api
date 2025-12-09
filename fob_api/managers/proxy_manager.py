@@ -75,7 +75,7 @@ class ProxyManager:
             new_maps["http"]["services"]["{}-service".format(uniq_name)] = {
                 "loadBalancer": {
                     "servers": [
-                        {"url": "".format(service.target)}
+                        {"url": "{}".format(service.target)}
                     ],
                     "passHostHeader": True,
                 }

@@ -31,35 +31,52 @@ def list_openstack_project_for_user(
     """
     auth.is_admin_or_self(user, username)
     user_find = session.exec(select(User).where(User.username == username)).first()
-    projects_owner = session.exec(select(Project).where(Project.owner_id == user_find.id)).all()
-    # get all owner projects
+    
+    # Get all project IDs for owned and member projects
+    owned_project_ids = [p.id for p in session.exec(select(Project).where(Project.owner_id == user_find.id)).all()]
+    member_project_ids = [pm.project_id for pm in session.exec(select(ProjectUserMembership).where(ProjectUserMembership.user_id == user_find.id)).all()]
+    all_project_ids = list(set(owned_project_ids + member_project_ids))
+    
+    if not all_project_ids:
+        return []
+    
+    # Batch fetch all projects
+    projects = {p.id: p for p in session.exec(select(Project).where(Project.id.in_(all_project_ids))).all()}
+    
+    # Batch fetch all memberships for these projects
+    memberships = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.project_id.in_(all_project_ids))).all()
+    memberships_by_project = {}
+    user_ids = set()
+    for membership in memberships:
+        if membership.project_id not in memberships_by_project:
+            memberships_by_project[membership.project_id] = []
+        memberships_by_project[membership.project_id].append(membership.user_id)
+        user_ids.add(membership.user_id)
+    
+    # Add owners to user_ids set
+    for project in projects.values():
+        user_ids.add(project.owner_id)
+    
+    # Batch fetch all users
+    users = {u.id: u.username for u in session.exec(select(User).where(User.id.in_(list(user_ids)))).all()}
+    
+    # Build response
     data = []
-    for project in projects_owner:
-        db_members = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.project_id == project.id)).all()
+    for project_id in all_project_ids:
+        project = projects.get(project_id)
+        if not project:
+            continue
+        
+        owner_username = users.get(project.owner_id, "")
+        member_usernames = [users.get(uid) for uid in memberships_by_project.get(project_id, []) if users.get(uid)]
+        
         data.append(OpenStackProjectAPI(
             id=project.id,
             name=project.name,
-            owner=username,
-            members=[
-                session.exec(select(User).where(User.id == member.user_id)).first().username
-                for member in db_members
-            ]
+            owner=owner_username,
+            members=member_usernames
         ))
-    # get all member projects and add to data
-    project_memberships = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.user_id == user_find.id)).all()
-    for project_membership in project_memberships:
-        local_project = session.exec(select(Project).where(Project.id == project_membership.project_id)).first()
-        db_members = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.project_id == local_project.id)).all()
-        owner = session.exec(select(User).where(User.id == local_project.owner_id)).first()
-        data.append(OpenStackProjectAPI(
-            id=local_project.id,
-            name=local_project.name,
-            owner=owner.username,
-            members=[
-                session.exec(select(User).where(User.id == member.user_id)).first().username
-                for member in db_members
-            ]
-        ))
+    
     return data
 
 @router.post("/projects/{project_name}", tags=["openstack"])
@@ -194,10 +211,12 @@ def remove_user_from_project(
     """
     # check if owner of the project or is admin
     db_project = session.exec(select(Project).where(Project.name == project_name)).first()
-    db_project_members_name = [
-        session.exec(select(User).where(User.id == member.user_id)).first().username
-        for member in session.exec(select(ProjectUserMembership).where(ProjectUserMembership.project_id == db_project.id)).all()
-    ]
+    
+    # Batch fetch project members to avoid N+1 queries
+    project_members = session.exec(select(ProjectUserMembership).where(ProjectUserMembership.project_id == db_project.id)).all()
+    member_user_ids = [member.user_id for member in project_members]
+    member_users = session.exec(select(User).where(User.id.in_(member_user_ids))).all() if member_user_ids else []
+    db_project_members_name = [u.username for u in member_users]
 
     # action allowed if anyone of the following is true
     # 1. user is admin
