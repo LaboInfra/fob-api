@@ -18,6 +18,47 @@ from fob_api.worker import celery
 
 router = APIRouter(prefix="/users")
 
+# Password validation constants
+SPECIAL_CHARS = "!@#$%^&*()-_=+[]{}|;:,.<>?/"
+
+def validate_password_strength(password: str) -> None:
+    """
+    Validate password strength in a single pass.
+    Raises HTTPException if password doesn't meet requirements.
+    """
+    if len(password) <= 12:
+        raise HTTPException(status_code=400, detail="Password must be at least 12 characters long")
+    
+    has_digit = False
+    has_upper = False
+    has_lower = False
+    has_special = False
+    
+    for char in password:
+        if char.isdigit():
+            has_digit = True
+        elif char.isupper():
+            has_upper = True
+        elif char.islower():
+            has_lower = True
+        elif char in SPECIAL_CHARS:
+            has_special = True
+        
+        # Early exit if all requirements are met
+        if has_digit and has_upper and has_lower and has_special:
+            return
+    
+    # Check which requirements were not met
+    if not has_digit:
+        raise HTTPException(status_code=400, detail="Password must contain at least one digit")
+    if not has_upper:
+        raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
+    if not has_lower:
+        raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
+    if not has_special:
+        raise HTTPException(status_code=400, detail="Password must contain at least one special character")
+
+
 @router.get("/", response_model=list[UserInfo], tags=["users"])
 def get_users(
         user: Annotated[User, Depends(auth.get_current_user)],
@@ -174,17 +215,8 @@ def reset_password(
         session.delete(user_reset_password)
         session.commit()
         raise HTTPException(status_code=404, detail="Unable to reset password")
-    # Check password strength (i know this is not the best way to do but i am lazy :p )
-    if len(password) <= 12:
-        raise HTTPException(status_code=400, detail="Password must be at least 12 characters long")
-    if not any(char.isdigit() for char in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one digit")
-    if not any(char.isupper() for char in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
-    if not any(char.islower() for char in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
-    if not any(char in "!@#$%^&*()-_=+[]{}|;:,.<>?/" for char in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one special character")
+    # Validate password strength
+    validate_password_strength(password)
     user.password = hash_password(password)
     session.delete(user_reset_password)
     session.commit()
